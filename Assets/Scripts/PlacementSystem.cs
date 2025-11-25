@@ -19,6 +19,14 @@ public class PlacementSystem : MonoBehaviour
     // Materials for preview
     private Dictionary<Renderer, Material[]> originalMaterials = new Dictionary<Renderer, Material[]>();
     
+    // Drag and drop state
+    private GameObject draggedObject;
+    private PlacedObjectData draggedObjectData;
+    private Vector2Int dragOriginalGridPosition;
+    private Vector2Int dragOriginalGridSize;
+    private float dragYOffset;
+    private bool isDragging = false;
+    
     void Start()
     {
         if (mainCamera == null)
@@ -31,6 +39,7 @@ public class PlacementSystem : MonoBehaviour
     {
         if (currentPlaceableObject != null && previewObject != null)
         {
+            // Preview mode for placing new objects
             UpdatePreviewPosition();
             
             // Place object on left mouse click
@@ -43,6 +52,33 @@ public class PlacementSystem : MonoBehaviour
             if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
             {
                 CancelPlacement();
+            }
+        }
+        else if (isDragging)
+        {
+            // Update dragged object position
+            UpdateDragPosition();
+            
+            // Release dragged object on mouse up
+            if (Input.GetMouseButtonUp(0))
+            {
+                EndDrag();
+            }
+        }
+        else
+        {
+            // Not in preview mode or dragging - handle interaction with placed objects
+            
+            // Start dragging on left mouse down
+            if (Input.GetMouseButtonDown(0))
+            {
+                TryStartDrag();
+            }
+            
+            // Delete object on right mouse down
+            if (Input.GetMouseButtonDown(1))
+            {
+                TryDeleteObject();
             }
         }
     }
@@ -217,6 +253,219 @@ public class PlacementSystem : MonoBehaviour
         
         currentPlaceableObject = null;
         originalMaterials.Clear();
+    }
+    
+    private void TryStartDrag()
+    {
+        // Raycast to find a placed object
+        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+        
+        if (Physics.Raycast(ray, out hit))
+        {
+            // Check if the hit object or its parent has PlacedObjectData
+            GameObject hitObject = hit.collider.gameObject;
+            PlacedObjectData placedData = hitObject.GetComponent<PlacedObjectData>();
+            
+            // If not found on the hit object, check parent
+            if (placedData == null)
+            {
+                placedData = hitObject.GetComponentInParent<PlacedObjectData>();
+            }
+            
+            if (placedData != null)
+            {
+                // Start dragging this object
+                draggedObject = placedData.gameObject;
+                draggedObjectData = placedData;
+                dragOriginalGridPosition = placedData.gridPosition;
+                dragOriginalGridSize = placedData.gridSize;
+                isDragging = true;
+                
+                // Calculate Y offset for proper positioning
+                PlaceableObject placeableObj = draggedObject.GetComponent<PlaceableObject>();
+                if (placeableObj != null && placeableObj.meshCollider != null)
+                {
+                    Bounds bounds = placeableObj.meshCollider.bounds;
+                    dragYOffset = draggedObject.transform.position.y - bounds.min.y;
+                }
+                else
+                {
+                    dragYOffset = draggedObject.transform.position.y;
+                }
+                
+                // Free up the occupied cells that this object was using
+                FreeOccupiedCells(dragOriginalGridPosition, dragOriginalGridSize);
+                
+                // Apply preview material to dragged object
+                ApplyPreviewMaterial(draggedObject);
+            }
+        }
+    }
+    
+    private void UpdateDragPosition()
+    {
+        if (draggedObject == null || cage == null)
+            return;
+        
+        // Cast ray from mouse to ground plane
+        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+        Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
+        
+        if (groundPlane.Raycast(ray, out float distance))
+        {
+            Vector3 worldPoint = ray.GetPoint(distance);
+            
+            // Convert to grid coordinates
+            Vector2Int gridPos = WorldToGrid(worldPoint);
+            currentGridPosition = gridPos;
+            
+            // Snap to grid
+            Vector3 snappedPosition = GridToWorld(gridPos, dragOriginalGridSize);
+            snappedPosition.y = dragYOffset;
+            
+            draggedObject.transform.position = snappedPosition;
+            
+            // Validate placement
+            isPlacementValid = IsPlacementValid(gridPos, dragOriginalGridSize);
+            
+            // Update color based on validity
+            UpdateDragColor(isPlacementValid);
+        }
+    }
+    
+    private void EndDrag()
+    {
+        if (draggedObject == null)
+        {
+            isDragging = false;
+            return;
+        }
+        
+        // Restore original materials
+        RestoreOriginalMaterial(draggedObject);
+        
+        if (isPlacementValid)
+        {
+            // Place in new position
+            draggedObjectData.gridPosition = currentGridPosition;
+            
+            // Mark new grid cells as occupied
+            OccupyCells(currentGridPosition, dragOriginalGridSize);
+        }
+        else
+        {
+            // Return to original position
+            Vector3 originalPosition = GridToWorld(dragOriginalGridPosition, dragOriginalGridSize);
+            originalPosition.y = dragYOffset;
+            draggedObject.transform.position = originalPosition;
+            
+            // Re-occupy original cells
+            OccupyCells(dragOriginalGridPosition, dragOriginalGridSize);
+        }
+        
+        // Clear drag state
+        draggedObject = null;
+        draggedObjectData = null;
+        isDragging = false;
+    }
+    
+    private void TryDeleteObject()
+    {
+        // Raycast to find a placed object
+        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+        
+        if (Physics.Raycast(ray, out hit))
+        {
+            // Check if the hit object or its parent has PlacedObjectData
+            GameObject hitObject = hit.collider.gameObject;
+            PlacedObjectData placedData = hitObject.GetComponent<PlacedObjectData>();
+            
+            // If not found on the hit object, check parent
+            if (placedData == null)
+            {
+                placedData = hitObject.GetComponentInParent<PlacedObjectData>();
+            }
+            
+            if (placedData != null)
+            {
+                // Free up occupied cells
+                FreeOccupiedCells(placedData.gridPosition, placedData.gridSize);
+                
+                // Destroy the object
+                Destroy(placedData.gameObject);
+            }
+        }
+    }
+    
+    private void ApplyPreviewMaterial(GameObject obj)
+    {
+        originalMaterials.Clear();
+        Renderer[] renderers = obj.GetComponentsInChildren<Renderer>();
+        foreach (Renderer renderer in renderers)
+        {
+            originalMaterials[renderer] = renderer.materials;
+            
+            // Create transparent materials for preview
+            Material[] previewMaterials = new Material[renderer.materials.Length];
+            for (int i = 0; i < renderer.materials.Length; i++)
+            {
+                previewMaterials[i] = new Material(previewMaterial);
+                previewMaterials[i].color = new Color(1f, 1f, 1f, 0.5f);
+            }
+            renderer.materials = previewMaterials;
+        }
+    }
+    
+    private void RestoreOriginalMaterial(GameObject obj)
+    {
+        foreach (var kvp in originalMaterials)
+        {
+            if (kvp.Key != null)
+            {
+                kvp.Key.materials = kvp.Value;
+            }
+        }
+        originalMaterials.Clear();
+    }
+    
+    private void UpdateDragColor(bool isValid)
+    {
+        Color color = isValid ? new Color(1f, 1f, 1f, 0.5f) : new Color(1f, 0.3f, 0.3f, 0.5f);
+        
+        Renderer[] renderers = draggedObject.GetComponentsInChildren<Renderer>();
+        foreach (Renderer renderer in renderers)
+        {
+            foreach (Material mat in renderer.materials)
+            {
+                mat.color = color;
+            }
+        }
+    }
+    
+    private void OccupyCells(Vector2Int gridPos, Vector2Int gridSize)
+    {
+        for (int x = 0; x < gridSize.x; x++)
+        {
+            for (int z = 0; z < gridSize.y; z++)
+            {
+                Vector2Int cellPos = new Vector2Int(gridPos.x + x, gridPos.y + z);
+                occupiedCells.Add(cellPos);
+            }
+        }
+    }
+    
+    private void FreeOccupiedCells(Vector2Int gridPos, Vector2Int gridSize)
+    {
+        for (int x = 0; x < gridSize.x; x++)
+        {
+            for (int z = 0; z < gridSize.y; z++)
+            {
+                Vector2Int cellPos = new Vector2Int(gridPos.x + x, gridPos.y + z);
+                occupiedCells.Remove(cellPos);
+            }
+        }
     }
     
     private Vector2Int WorldToGrid(Vector3 worldPos)
