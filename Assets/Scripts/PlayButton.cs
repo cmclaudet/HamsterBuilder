@@ -5,8 +5,7 @@ using UnityEngine.UI;
 
 public class PlayButton : MonoBehaviour
 {
-    public Hamster hamsterPrefab;
-    public GameObject hamsterSpawnPosition;
+    public HamsterSpawner hamsterSpawner;
     public Button button;
     public TextMeshProUGUI PlayText;
     public TextMeshProUGUI StopText;
@@ -28,12 +27,7 @@ public class PlayButton : MonoBehaviour
         foreach (var button in buttons) {
             button.interactable = false;
         }
-
-        // Spawn 3 hamsters at spawn position
-        for (int i = 0; i < 3; i++)
-        {
-            Instantiate(hamsterPrefab, hamsterSpawnPosition.transform.position, Quaternion.identity);
-        }
+        hamsterSpawner.SpawnHamsters();
         
         // Update UI
         PlayText.gameObject.SetActive(false);

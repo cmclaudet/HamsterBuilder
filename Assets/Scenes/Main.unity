@@ -786,8 +786,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb4248814fc734d98b4ca91c9d896860, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hamsterPrefab: {fileID: 3466909786312617345, guid: e3fc14e3161ed4e58bdb6174924d6f5e, type: 3}
-  hamsterSpawnPosition: {fileID: 2017166908}
+  hamsterSpawner: {fileID: 2017166910}
   button: {fileID: 1096512429}
   PlayText: {fileID: 630197191}
   StopText: {fileID: 1235159090}
@@ -1413,6 +1412,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2017166909}
+  - component: {fileID: 2017166910}
   m_Layer: 0
   m_Name: SpawnPosition
   m_TagString: Untagged
@@ -1435,6 +1435,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2017166910
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2017166908}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c52c9092ca154d32a0b1388a07a323a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spawnFrequency: 2
+  hamsterPrefab: {fileID: 3466909786312617345, guid: e3fc14e3161ed4e58bdb6174924d6f5e, type: 3}
+  hamsterSpawnPosition: {fileID: 2017166908}
 --- !u!1 &2044039563
 GameObject:
   m_ObjectHideFlags: 0

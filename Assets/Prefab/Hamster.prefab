@@ -155,6 +155,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c9cc64549fcea4d469bfd5b2aa895812, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 0.5
+  moveSpeed: 1
   lookDistance: 10
+  moveDelay: 2
   gridManager: {fileID: 0}
