@@ -16,16 +16,16 @@ public class UIPanel : MonoBehaviour
     private void LoadPlaceableObjects()
     {
         // Load all PlaceableObject assets from Resources
-        PlaceableObject[] placeableObjects = Resources.LoadAll<PlaceableObject>("PlaceableObjects");
+        PlaceableObjectDefinition[] placeableObjects = Resources.LoadAll<PlaceableObjectDefinition>("PlaceableObjects");
         
         // Create a button for each placeable object
-        foreach (PlaceableObject placeableObject in placeableObjects)
+        foreach (PlaceableObjectDefinition placeableObject in placeableObjects)
         {
             CreateButtonForObject(placeableObject);
         }
     }
     
-    private void CreateButtonForObject(PlaceableObject placeableObject)
+    private void CreateButtonForObject(PlaceableObjectDefinition placeableObject)
     {
         if (ButtonPrefab == null)
         {
@@ -56,7 +56,7 @@ public class UIPanel : MonoBehaviour
         button.onClick.AddListener(() => OnPlaceableObjectButtonClicked(placeableObject));
     }
     
-    private void OnPlaceableObjectButtonClicked(PlaceableObject placeableObject)
+    private void OnPlaceableObjectButtonClicked(PlaceableObjectDefinition placeableObject)
     {
         if (placementSystem != null)
         {

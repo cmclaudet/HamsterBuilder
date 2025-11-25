@@ -6,7 +6,7 @@ public class PlacementSystem : MonoBehaviour
     public Cage cage;
     public Camera mainCamera;
     
-    private PlaceableObject currentPlaceableObject;
+    private PlaceableObjectDefinition currentPlaceableObject;
     private GameObject previewObject;
     private Vector2Int currentGridPosition;
     private bool isPlacementValid;
@@ -57,7 +57,7 @@ public class PlacementSystem : MonoBehaviour
         }
     }
     
-    public void StartPlacement(PlaceableObject placeableObject)
+    public void StartPlacement(PlaceableObjectDefinition placeableObject)
     {
         // Cancel any existing placement
         if (previewObject != null)
