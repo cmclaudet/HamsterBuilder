@@ -792,6 +792,7 @@ MonoBehaviour:
   PlayText: {fileID: 630197191}
   StopText: {fileID: 1235159090}
   placementSystem: {fileID: 468200427}
+  uIPanel: {fileID: 1369979525}
 --- !u!1 &1162989281
 GameObject:
   m_ObjectHideFlags: 0

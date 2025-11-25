@@ -11,6 +11,7 @@ public class PlayButton : MonoBehaviour
     public TextMeshProUGUI PlayText;
     public TextMeshProUGUI StopText;
     public PlacementSystem placementSystem;
+    public UIPanel uIPanel;
     
     void Start()
     {
@@ -23,7 +24,11 @@ public class PlayButton : MonoBehaviour
     {
         // Disable editing
         placementSystem.DisableEditing();
-        
+        var buttons = uIPanel.GetComponentsInChildren<Button>();
+        foreach (var button in buttons) {
+            button.interactable = false;
+        }
+
         // Spawn 3 hamsters at spawn position
         for (int i = 0; i < 3; i++)
         {
