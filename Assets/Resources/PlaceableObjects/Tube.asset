@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: Tube
   m_EditorClassIdentifier: 
   GridSize: {x: 1, y: 1}
-  Prefab: {fileID: 9159356683453744837, guid: 58286ed430fb54d86b12fd86758caad3, type: 3}
+  Prefab: {fileID: 6470080241442887413, guid: 810161994c5aa432d8f8a2fcf5e58dc7, type: 3}
