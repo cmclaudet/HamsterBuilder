@@ -4,5 +4,5 @@ using UnityEngine;
 public class PlaceableObjectDefinition : ScriptableObject
 {
     public Vector2Int GridSize;
-    public GameObject Prefab;
+    public PlaceableObject Prefab;
 }

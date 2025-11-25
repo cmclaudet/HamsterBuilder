@@ -10,6 +10,7 @@ public class PlacementSystem : MonoBehaviour
     private GameObject previewObject;
     private Vector2Int currentGridPosition;
     private bool isPlacementValid;
+    private float previewYOffset; // Y offset to place object on floor
     
     // Track occupied grid cells
     private HashSet<Vector2Int> occupiedCells = new HashSet<Vector2Int>();
@@ -68,7 +69,21 @@ public class PlacementSystem : MonoBehaviour
         currentPlaceableObject = placeableObject;
         
         // Create preview object
-        previewObject = Instantiate(placeableObject.Prefab);
+        previewObject = Instantiate(placeableObject.Prefab.gameObject);
+        
+        // Calculate Y offset BEFORE disabling colliders (so bounds are available)
+        PlaceableObject placeableObj = previewObject.GetComponent<PlaceableObject>();
+        if (placeableObj != null && placeableObj.meshCollider != null)
+        {
+            // Get the bounds of the mesh collider in world space
+            Bounds bounds = placeableObj.meshCollider.bounds;
+            // Store the offset from object position to its bottom
+            previewYOffset = previewObject.transform.position.y - bounds.min.y;
+        }
+        else
+        {
+            previewYOffset = 0f;
+        }
         
         // Store original materials and apply preview material
         originalMaterials.Clear();
@@ -116,6 +131,10 @@ public class PlacementSystem : MonoBehaviour
             
             // Snap to grid
             Vector3 snappedPosition = GridToWorld(gridPos);
+            
+            // Adjust Y position to place object on floor using pre-calculated offset
+            snappedPosition.y = previewYOffset;
+            
             previewObject.transform.position = snappedPosition;
             
             // Validate placement
@@ -172,9 +191,12 @@ public class PlacementSystem : MonoBehaviour
         if (currentPlaceableObject == null || previewObject == null)
             return;
         
+        // Get the position from preview (which already has correct Y position)
+        Vector3 placePosition = previewObject.transform.position;
+        
         // Instantiate the actual object
-        GameObject placedObject = Instantiate(currentPlaceableObject.Prefab, 
-            previewObject.transform.position, 
+        GameObject placedObject = Instantiate(currentPlaceableObject.Prefab.gameObject, 
+            placePosition, 
             previewObject.transform.rotation);
         
         // Mark grid cells as occupied
