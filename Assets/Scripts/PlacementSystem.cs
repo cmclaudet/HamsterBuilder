@@ -28,6 +28,8 @@ public class PlacementSystem : MonoBehaviour
     private Vector2Int dragOriginalGridSize;
     private float dragYOffset;
     private bool isDragging = false;
+    private int dragRotation = 0; // Track rotation for dragged objects
+    private Quaternion dragOriginalRotation; // Store original rotation for canceling
     
     void Start()
     {
@@ -65,6 +67,12 @@ public class PlacementSystem : MonoBehaviour
         {
             // Update dragged object position
             UpdateDragPosition();
+            
+            // Rotate dragged object on R key
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                RotateDraggedObject();
+            }
             
             // Release dragged object on mouse up
             if (Input.GetMouseButtonUp(0))
@@ -169,6 +177,30 @@ public class PlacementSystem : MonoBehaviour
         }
         
         return originalSize;
+    }
+    
+    // Get the effective grid size for dragged objects based on rotation
+    private Vector2Int GetDraggedRotatedGridSize()
+    {
+        Vector2Int originalSize = dragOriginalGridSize;
+        
+        // For 90 and 270 degree rotations, swap x and y
+        if (dragRotation == 90 || dragRotation == 270)
+        {
+            return new Vector2Int(originalSize.y, originalSize.x);
+        }
+        
+        return originalSize;
+    }
+    
+    private void RotateDraggedObject()
+    {
+        if (draggedObject != null)
+        {
+            Debug.Log("Rotate dragged object!");
+            draggedObject.transform.Rotate(new Vector3(0, 90, 0), Space.World);
+            dragRotation = (dragRotation + 90) % 360;
+        }
     }
     
     private void UpdatePreviewPosition()
@@ -320,7 +352,9 @@ public class PlacementSystem : MonoBehaviour
                 draggedObjectData = placedData;
                 dragOriginalGridPosition = placedData.gridPosition;
                 dragOriginalGridSize = placedData.gridSize;
+                dragOriginalRotation = placedData.transform.rotation; // Store original rotation
                 isDragging = true;
+                dragRotation = 0; // Track additional rotation from this point
                 
                 // Calculate Y offset for proper positioning
                 PlaceableObject placeableObj = draggedObject.GetComponent<PlaceableObject>();
@@ -360,14 +394,17 @@ public class PlacementSystem : MonoBehaviour
             Vector2Int gridPos = WorldToGrid(worldPoint);
             currentGridPosition = gridPos;
             
+            // Get the rotated grid size
+            Vector2Int rotatedSize = GetDraggedRotatedGridSize();
+            
             // Snap to grid
-            Vector3 snappedPosition = GridToWorld(gridPos, dragOriginalGridSize);
+            Vector3 snappedPosition = GridToWorld(gridPos, rotatedSize);
             snappedPosition.y = dragYOffset;
             
             draggedObject.transform.position = snappedPosition;
             
             // Validate placement
-            isPlacementValid = IsPlacementValid(gridPos, dragOriginalGridSize);
+            isPlacementValid = IsPlacementValid(gridPos, rotatedSize);
             
             // Update color based on validity
             UpdateDragColor(isPlacementValid);
@@ -385,20 +422,27 @@ public class PlacementSystem : MonoBehaviour
         // Restore original materials
         RestoreOriginalMaterial(draggedObject);
         
+        // Get the rotated grid size
+        Vector2Int rotatedSize = GetDraggedRotatedGridSize();
+        
         if (isPlacementValid)
         {
             // Place in new position
             draggedObjectData.gridPosition = currentGridPosition;
+            draggedObjectData.gridSize = rotatedSize; // Update stored grid size
             
             // Mark new grid cells as occupied
-            OccupyCells(currentGridPosition, dragOriginalGridSize);
+            OccupyCells(currentGridPosition, rotatedSize);
         }
         else
         {
-            // Return to original position
+            // Return to original position and rotation
             Vector3 originalPosition = GridToWorld(dragOriginalGridPosition, dragOriginalGridSize);
             originalPosition.y = dragYOffset;
             draggedObject.transform.position = originalPosition;
+            
+            // Restore original rotation if placement was invalid
+            draggedObject.transform.rotation = dragOriginalRotation;
             
             // Re-occupy original cells
             OccupyCells(dragOriginalGridPosition, dragOriginalGridSize);
@@ -408,6 +452,7 @@ public class PlacementSystem : MonoBehaviour
         draggedObject = null;
         draggedObjectData = null;
         isDragging = false;
+        dragRotation = 0; // Reset rotation
     }
     
     private void TryDeleteObject()
