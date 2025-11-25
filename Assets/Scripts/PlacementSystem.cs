@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 public class PlacementSystem : MonoBehaviour
 {
@@ -12,6 +13,7 @@ public class PlacementSystem : MonoBehaviour
     private Vector2Int currentGridPosition;
     private bool isPlacementValid;
     private float previewYOffset; // Y offset to place object on floor
+    private int currentRotation = 0; // Track rotation in degrees (0, 90, 180, 270)
     
     // Track occupied grid cells
     private HashSet<Vector2Int> occupiedCells = new HashSet<Vector2Int>();
@@ -41,6 +43,11 @@ public class PlacementSystem : MonoBehaviour
         {
             // Preview mode for placing new objects
             UpdatePreviewPosition();
+
+            if (Input.GetKeyDown(KeyCode.R)) 
+            {
+                RotatePreviewObject();
+            }
             
             // Place object on left mouse click
             if (Input.GetMouseButtonDown(0) && isPlacementValid)
@@ -82,7 +89,7 @@ public class PlacementSystem : MonoBehaviour
             }
         }
     }
-    
+
     public void StartPlacement(PlaceableObjectDefinition placeableObject)
     {
         // Cancel any existing placement
@@ -92,6 +99,7 @@ public class PlacementSystem : MonoBehaviour
         }
         
         currentPlaceableObject = placeableObject;
+        currentRotation = 0; // Reset rotation for new object
         
         // Create preview object
         previewObject = Instantiate(placeableObject.Prefab.gameObject);
@@ -136,6 +144,32 @@ public class PlacementSystem : MonoBehaviour
         
         UpdatePreviewPosition();
     }
+
+    private void RotatePreviewObject()
+    {
+        if (previewObject != null) {
+            Debug.Log("Rotate!");
+            previewObject.transform.Rotate(new Vector3(0, 90, 0), Space.World);
+            currentRotation = (currentRotation + 90) % 360;
+        }
+    }
+    
+    // Get the effective grid size based on current rotation
+    private Vector2Int GetRotatedGridSize()
+    {
+        if (currentPlaceableObject == null)
+            return Vector2Int.zero;
+            
+        Vector2Int originalSize = currentPlaceableObject.GridSize;
+        
+        // For 90 and 270 degree rotations, swap x and y
+        if (currentRotation == 90 || currentRotation == 270)
+        {
+            return new Vector2Int(originalSize.y, originalSize.x);
+        }
+        
+        return originalSize;
+    }
     
     private void UpdatePreviewPosition()
     {
@@ -154,8 +188,11 @@ public class PlacementSystem : MonoBehaviour
             Vector2Int gridPos = WorldToGrid(worldPoint);
             currentGridPosition = gridPos;
             
-            // Snap to grid (pass object size for proper centering)
-            Vector3 snappedPosition = GridToWorld(gridPos, currentPlaceableObject.GridSize);
+            // Get the rotated grid size
+            Vector2Int rotatedSize = GetRotatedGridSize();
+            
+            // Snap to grid (pass rotated object size for proper centering)
+            Vector3 snappedPosition = GridToWorld(gridPos, rotatedSize);
             
             // Adjust Y position to place object on floor using pre-calculated offset
             snappedPosition.y = previewYOffset;
@@ -163,7 +200,7 @@ public class PlacementSystem : MonoBehaviour
             previewObject.transform.position = snappedPosition;
             
             // Validate placement
-            isPlacementValid = IsPlacementValid(gridPos, currentPlaceableObject.GridSize);
+            isPlacementValid = IsPlacementValid(gridPos, rotatedSize);
             
             // Update preview color based on validity
             UpdatePreviewColor(isPlacementValid);
@@ -224,10 +261,13 @@ public class PlacementSystem : MonoBehaviour
             placePosition, 
             previewObject.transform.rotation);
         
+        // Get the rotated grid size
+        Vector2Int rotatedSize = GetRotatedGridSize();
+        
         // Mark grid cells as occupied
-        for (int x = 0; x < currentPlaceableObject.GridSize.x; x++)
+        for (int x = 0; x < rotatedSize.x; x++)
         {
-            for (int z = 0; z < currentPlaceableObject.GridSize.y; z++)
+            for (int z = 0; z < rotatedSize.y; z++)
             {
                 Vector2Int cellPos = new Vector2Int(currentGridPosition.x + x, currentGridPosition.y + z);
                 occupiedCells.Add(cellPos);
@@ -237,7 +277,7 @@ public class PlacementSystem : MonoBehaviour
         // Store grid info on the placed object for potential future removal
         PlacedObjectData placedData = placedObject.AddComponent<PlacedObjectData>();
         placedData.gridPosition = currentGridPosition;
-        placedData.gridSize = currentPlaceableObject.GridSize;
+        placedData.gridSize = rotatedSize; // Store the rotated size
         
         // Continue placement mode (don't cancel)
         // User can keep placing the same object type

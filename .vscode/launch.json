@@ -2,9 +2,18 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Unity Debugger",
+            "type": "unity",
+            "userAssemblies": [
+                "$/Users/Cat/Dev/HamsterBuilder/Library/ScriptAssemblies/Assembly-CSharp.dll",
+                "$/Users/Cat/Dev/HamsterBuilder/Library/ScriptAssemblies/Assembly-CSharp-Editor.dll",
+            ],
+            "request": "attach"
+        },
+        {
             "name": "Attach to Unity",
             "type": "vstuc",
             "request": "attach"
         }
-     ]
+    ]
 }
