@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: Wheel
   m_EditorClassIdentifier: 
   GridSize: {x: 2, y: 1}
-  Prefab: {fileID: 1149484774378704078, guid: e14c34fddb386454a85ef75e4cabe8c1, type: 3}
+  Prefab: {fileID: 818463105488187576, guid: e14c34fddb386454a85ef75e4cabe8c1, type: 3}
