@@ -5,6 +5,7 @@ public class PlacementSystem : MonoBehaviour
 {
     public Cage cage;
     public Camera mainCamera;
+    public Material previewMaterial;
     
     private PlaceableObjectDefinition currentPlaceableObject;
     private GameObject previewObject;
@@ -17,7 +18,6 @@ public class PlacementSystem : MonoBehaviour
     
     // Materials for preview
     private Dictionary<Renderer, Material[]> originalMaterials = new Dictionary<Renderer, Material[]>();
-    private Material previewMaterial;
     
     void Start()
     {
@@ -25,17 +25,6 @@ public class PlacementSystem : MonoBehaviour
         {
             mainCamera = Camera.main;
         }
-        
-        // Create a transparent material for previews
-        previewMaterial = new Material(Shader.Find("Standard"));
-        previewMaterial.SetFloat("_Mode", 3); // Transparent mode
-        previewMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        previewMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-        previewMaterial.SetInt("_ZWrite", 0);
-        previewMaterial.DisableKeyword("_ALPHATEST_ON");
-        previewMaterial.EnableKeyword("_ALPHABLEND_ON");
-        previewMaterial.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-        previewMaterial.renderQueue = 3000;
     }
     
     void Update()
@@ -129,8 +118,8 @@ public class PlacementSystem : MonoBehaviour
             Vector2Int gridPos = WorldToGrid(worldPoint);
             currentGridPosition = gridPos;
             
-            // Snap to grid
-            Vector3 snappedPosition = GridToWorld(gridPos);
+            // Snap to grid (pass object size for proper centering)
+            Vector3 snappedPosition = GridToWorld(gridPos, currentPlaceableObject.GridSize);
             
             // Adjust Y position to place object on floor using pre-calculated offset
             snappedPosition.y = previewYOffset;
@@ -243,14 +232,20 @@ public class PlacementSystem : MonoBehaviour
         return new Vector2Int(gridX, gridZ);
     }
     
-    private Vector3 GridToWorld(Vector2Int gridPos)
+    private Vector3 GridToWorld(Vector2Int gridPos, Vector2Int objectSize)
     {
         // Convert grid coordinates to world position
         float halfWidth = (cage.GridSize.x * cage.GridUnitSize) / 2f;
         float halfDepth = (cage.GridSize.y * cage.GridUnitSize) / 2f;
         
-        float worldX = (gridPos.x * cage.GridUnitSize) - halfWidth + (cage.GridUnitSize / 2f);
-        float worldZ = (gridPos.y * cage.GridUnitSize) - halfDepth + (cage.GridUnitSize / 2f);
+        // Calculate offset based on object size so objects align to grid properly
+        // For even-sized objects (2x2, 4x4), this positions them at grid intersections
+        // For odd-sized objects (1x1, 3x3), this centers them in their cells
+        float offsetX = (objectSize.x * cage.GridUnitSize) / 2f;
+        float offsetZ = (objectSize.y * cage.GridUnitSize) / 2f;
+        
+        float worldX = (gridPos.x * cage.GridUnitSize) - halfWidth + offsetX;
+        float worldZ = (gridPos.y * cage.GridUnitSize) - halfDepth + offsetZ;
         
         return new Vector3(worldX, 0f, worldZ);
     }

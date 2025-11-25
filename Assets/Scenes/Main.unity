@@ -252,6 +252,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cage: {fileID: 1162989286}
   mainCamera: {fileID: 1373555729}
+  previewMaterial: {fileID: 2100000, guid: d589fe6f32c394688bf18323962377ab, type: 2}
 --- !u!4 &468200428
 Transform:
   m_ObjectHideFlags: 0
