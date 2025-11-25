@@ -10,6 +10,7 @@ public class PlayButton : MonoBehaviour
     public Button button;
     public TextMeshProUGUI PlayText;
     public TextMeshProUGUI StopText;
+    public PlacementSystem placementSystem;
     
     void Start()
     {
@@ -20,6 +21,20 @@ public class PlayButton : MonoBehaviour
 
     private void StartPlayMode()
     {
-        // todo spawn 3 hamsters at spawn position
+        // Disable editing
+        placementSystem.DisableEditing();
+        
+        // Spawn 3 hamsters at spawn position
+        for (int i = 0; i < 3; i++)
+        {
+            Instantiate(hamsterPrefab, hamsterSpawnPosition.transform.position, Quaternion.identity);
+        }
+        
+        // Update UI
+        PlayText.gameObject.SetActive(false);
+        StopText.gameObject.SetActive(true);
+        
+        // Disable button interaction
+        button.interactable = false;
     }
 }

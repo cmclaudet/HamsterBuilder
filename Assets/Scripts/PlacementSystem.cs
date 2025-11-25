@@ -7,6 +7,7 @@ public class PlacementSystem : MonoBehaviour
     public Cage cage;
     public Camera mainCamera;
     public Material previewMaterial;
+    public GridManager gridManager;
     
     private PlaceableObjectDefinition currentPlaceableObject;
     private GameObject previewObject;
@@ -14,9 +15,7 @@ public class PlacementSystem : MonoBehaviour
     private bool isPlacementValid;
     private float previewYOffset; // Y offset to place object on floor
     private int currentRotation = 0; // Track rotation in degrees (0, 90, 180, 270)
-    
-    // Track occupied grid cells
-    private HashSet<Vector2Int> occupiedCells = new HashSet<Vector2Int>();
+    private bool isEditingEnabled = true; // Track if editing is allowed
     
     // Materials for preview
     private Dictionary<Renderer, Material[]> originalMaterials = new Dictionary<Renderer, Material[]>();
@@ -41,6 +40,9 @@ public class PlacementSystem : MonoBehaviour
     
     void Update()
     {
+        if (!isEditingEnabled)
+            return;
+            
         if (currentPlaceableObject != null && previewObject != null)
         {
             // Preview mode for placing new objects
@@ -96,6 +98,12 @@ public class PlacementSystem : MonoBehaviour
                 TryDeleteObject();
             }
         }
+    }
+    
+    public void DisableEditing()
+    {
+        isEditingEnabled = false;
+        CancelPlacement();
     }
 
     public void StartPlacement(PlaceableObjectDefinition placeableObject)
@@ -217,14 +225,14 @@ public class PlacementSystem : MonoBehaviour
             Vector3 worldPoint = ray.GetPoint(distance);
             
             // Convert to grid coordinates
-            Vector2Int gridPos = WorldToGrid(worldPoint);
+            Vector2Int gridPos = gridManager.WorldToGrid(worldPoint);
             currentGridPosition = gridPos;
             
             // Get the rotated grid size
             Vector2Int rotatedSize = GetRotatedGridSize();
             
             // Snap to grid (pass rotated object size for proper centering)
-            Vector3 snappedPosition = GridToWorld(gridPos, rotatedSize);
+            Vector3 snappedPosition = gridManager.GridToWorld(gridPos, rotatedSize);
             
             // Adjust Y position to place object on floor using pre-calculated offset
             snappedPosition.y = previewYOffset;
@@ -255,7 +263,7 @@ public class PlacementSystem : MonoBehaviour
     
     private bool IsPlacementValid(Vector2Int gridPos, Vector2Int objectSize)
     {
-        // Check if all cells are within the cage bounds
+        // Check if all cells are within the cage bounds and not occupied
         for (int x = 0; x < objectSize.x; x++)
         {
             for (int z = 0; z < objectSize.y; z++)
@@ -263,14 +271,13 @@ public class PlacementSystem : MonoBehaviour
                 Vector2Int cellPos = new Vector2Int(gridPos.x + x, gridPos.y + z);
                 
                 // Check if within cage bounds
-                if (cellPos.x < 0 || cellPos.x >= cage.GridSize.x ||
-                    cellPos.y < 0 || cellPos.y >= cage.GridSize.y)
+                if (!gridManager.IsWithinBounds(cellPos))
                 {
                     return false;
                 }
                 
                 // Check if cell is already occupied
-                if (occupiedCells.Contains(cellPos))
+                if (gridManager.IsCellOccupied(cellPos))
                 {
                     return false;
                 }
@@ -297,14 +304,7 @@ public class PlacementSystem : MonoBehaviour
         Vector2Int rotatedSize = GetRotatedGridSize();
         
         // Mark grid cells as occupied
-        for (int x = 0; x < rotatedSize.x; x++)
-        {
-            for (int z = 0; z < rotatedSize.y; z++)
-            {
-                Vector2Int cellPos = new Vector2Int(currentGridPosition.x + x, currentGridPosition.y + z);
-                occupiedCells.Add(cellPos);
-            }
-        }
+        gridManager.OccupyCells(currentGridPosition, rotatedSize);
         
         // Store grid info on the placed object for potential future removal
         PlacedObjectData placedData = placedObject.AddComponent<PlacedObjectData>();
@@ -369,7 +369,7 @@ public class PlacementSystem : MonoBehaviour
                 }
                 
                 // Free up the occupied cells that this object was using
-                FreeOccupiedCells(dragOriginalGridPosition, dragOriginalGridSize);
+                gridManager.FreeCells(dragOriginalGridPosition, dragOriginalGridSize);
                 
                 // Apply preview material to dragged object
                 ApplyPreviewMaterial(draggedObject);
@@ -391,14 +391,14 @@ public class PlacementSystem : MonoBehaviour
             Vector3 worldPoint = ray.GetPoint(distance);
             
             // Convert to grid coordinates
-            Vector2Int gridPos = WorldToGrid(worldPoint);
+            Vector2Int gridPos = gridManager.WorldToGrid(worldPoint);
             currentGridPosition = gridPos;
             
             // Get the rotated grid size
             Vector2Int rotatedSize = GetDraggedRotatedGridSize();
             
             // Snap to grid
-            Vector3 snappedPosition = GridToWorld(gridPos, rotatedSize);
+            Vector3 snappedPosition = gridManager.GridToWorld(gridPos, rotatedSize);
             snappedPosition.y = dragYOffset;
             
             draggedObject.transform.position = snappedPosition;
@@ -432,12 +432,12 @@ public class PlacementSystem : MonoBehaviour
             draggedObjectData.gridSize = rotatedSize; // Update stored grid size
             
             // Mark new grid cells as occupied
-            OccupyCells(currentGridPosition, rotatedSize);
+            gridManager.OccupyCells(currentGridPosition, rotatedSize);
         }
         else
         {
             // Return to original position and rotation
-            Vector3 originalPosition = GridToWorld(dragOriginalGridPosition, dragOriginalGridSize);
+            Vector3 originalPosition = gridManager.GridToWorld(dragOriginalGridPosition, dragOriginalGridSize);
             originalPosition.y = dragYOffset;
             draggedObject.transform.position = originalPosition;
             
@@ -445,7 +445,7 @@ public class PlacementSystem : MonoBehaviour
             draggedObject.transform.rotation = dragOriginalRotation;
             
             // Re-occupy original cells
-            OccupyCells(dragOriginalGridPosition, dragOriginalGridSize);
+            gridManager.OccupyCells(dragOriginalGridPosition, dragOriginalGridSize);
         }
         
         // Clear drag state
@@ -476,7 +476,7 @@ public class PlacementSystem : MonoBehaviour
             if (placedData != null)
             {
                 // Free up occupied cells
-                FreeOccupiedCells(placedData.gridPosition, placedData.gridSize);
+                gridManager.FreeCells(placedData.gridPosition, placedData.gridSize);
                 
                 // Destroy the object
                 Destroy(placedData.gameObject);
@@ -527,61 +527,6 @@ public class PlacementSystem : MonoBehaviour
                 mat.color = color;
             }
         }
-    }
-    
-    private void OccupyCells(Vector2Int gridPos, Vector2Int gridSize)
-    {
-        for (int x = 0; x < gridSize.x; x++)
-        {
-            for (int z = 0; z < gridSize.y; z++)
-            {
-                Vector2Int cellPos = new Vector2Int(gridPos.x + x, gridPos.y + z);
-                occupiedCells.Add(cellPos);
-            }
-        }
-    }
-    
-    private void FreeOccupiedCells(Vector2Int gridPos, Vector2Int gridSize)
-    {
-        for (int x = 0; x < gridSize.x; x++)
-        {
-            for (int z = 0; z < gridSize.y; z++)
-            {
-                Vector2Int cellPos = new Vector2Int(gridPos.x + x, gridPos.y + z);
-                occupiedCells.Remove(cellPos);
-            }
-        }
-    }
-    
-    private Vector2Int WorldToGrid(Vector3 worldPos)
-    {
-        // Convert world position to grid coordinates
-        // The cage is centered at origin, so we need to offset
-        float halfWidth = (cage.GridSize.x * cage.GridUnitSize) / 2f;
-        float halfDepth = (cage.GridSize.y * cage.GridUnitSize) / 2f;
-        
-        int gridX = Mathf.FloorToInt((worldPos.x + halfWidth) / cage.GridUnitSize);
-        int gridZ = Mathf.FloorToInt((worldPos.z + halfDepth) / cage.GridUnitSize);
-        
-        return new Vector2Int(gridX, gridZ);
-    }
-    
-    private Vector3 GridToWorld(Vector2Int gridPos, Vector2Int objectSize)
-    {
-        // Convert grid coordinates to world position
-        float halfWidth = (cage.GridSize.x * cage.GridUnitSize) / 2f;
-        float halfDepth = (cage.GridSize.y * cage.GridUnitSize) / 2f;
-        
-        // Calculate offset based on object size so objects align to grid properly
-        // For even-sized objects (2x2, 4x4), this positions them at grid intersections
-        // For odd-sized objects (1x1, 3x3), this centers them in their cells
-        float offsetX = (objectSize.x * cage.GridUnitSize) / 2f;
-        float offsetZ = (objectSize.y * cage.GridUnitSize) / 2f;
-        
-        float worldX = (gridPos.x * cage.GridUnitSize) - halfWidth + offsetX;
-        float worldZ = (gridPos.y * cage.GridUnitSize) - halfDepth + offsetZ;
-        
-        return new Vector3(worldX, 0f, worldZ);
     }
     
     // Helper component to store placement data on objects
