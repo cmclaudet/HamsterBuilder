@@ -1,5 +1,7 @@
 
 public enum ObjectType {
     Tube,
-    Wheel
+    Wheel,
+    House,
+    Food
 }

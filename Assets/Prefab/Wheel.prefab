@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2049747922840868896
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6337200450375667185}
+  m_Layer: 0
+  m_Name: HamsterPos
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6337200450375667185
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2049747922840868896}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.486, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2741677620360176798}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3153996535855333073
 GameObject:
   m_ObjectHideFlags: 0
@@ -142,6 +173,7 @@ Transform:
   - {fileID: 587310154644701859}
   - {fileID: 3475287673954464245}
   - {fileID: 5603284318787853298}
+  - {fileID: 6337200450375667185}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7889292328981383663
@@ -161,6 +193,10 @@ MonoBehaviour:
   Entries:
   - {fileID: 7670048799113436888}
   - {fileID: 7182231556436532415}
+  hamsterPosition: {fileID: 2049747922840868896}
+  rotationSpeed: 90
+  interactionDuration: 7
+  WheelMesh: {fileID: 3153996535855333073}
 --- !u!1 &7182231556436532415
 GameObject:
   m_ObjectHideFlags: 0

@@ -16,6 +16,9 @@ public class Hamster : MonoBehaviour
     private Vector3 targetWorldPosition;
     private bool hasTarget = false;
     private bool isMoving = false;
+    private bool isInteracting = false;
+    private int foodPieceCount;
+    private PlaceableObject targetObject;
     
     void Start()
     {
@@ -26,10 +29,41 @@ public class Hamster : MonoBehaviour
     
     void Update()
     {
-        if (isMoving && hasTarget)
+        if (isMoving && hasTarget && !isInteracting)
         {
             MoveAlongPath();
         }
+    }
+
+    public void AddFoodPiece() {
+        foodPieceCount++;
+    }
+
+    public void SetPosition(Vector3 position)
+    {
+        transform.position = position;
+    }
+
+    public void RotateToFace(Vector3 targetPosition)
+    {
+        Vector3 direction = (targetPosition - transform.position).normalized;
+        direction.y = 0; // Keep rotation on horizontal plane
+        if (direction != Vector3.zero)
+        {
+            transform.rotation = Quaternion.LookRotation(direction);
+        }
+    }
+
+    public void StartInteraction()
+    {
+        isInteracting = true;
+    }
+
+    public void EndInteraction()
+    {
+        isInteracting = false;
+        hasTarget = false;
+        StartCoroutine(FindAndSetTarget());
     }
     
     private IEnumerator FindAndSetTarget()
@@ -42,7 +76,7 @@ public class Hamster : MonoBehaviour
         Vector2Int hamsterGridPos = gridManager.WorldToGrid(transform.position);
         
         // List to store valid entry points with their paths
-        List<(Vector3 worldPos, List<Vector2Int> path)> validEntryPoints = new List<(Vector3, List<Vector2Int>)>();
+        List<(Vector3 worldPos, List<Vector2Int> path, PlaceableObject obj)> validEntryPoints = new List<(Vector3, List<Vector2Int>, PlaceableObject)>();
         
         foreach (PlaceableObject obj in allObjects)
         {
@@ -67,7 +101,7 @@ public class Hamster : MonoBehaviour
                 
                 if (path != null && path.Count > 0)
                 {
-                    validEntryPoints.Add((entryPoint, path));
+                    validEntryPoints.Add((entryPoint, path, obj));
                 }
             }
         }
@@ -81,6 +115,7 @@ public class Hamster : MonoBehaviour
             currentPath = chosen.path;
             currentPathIndex = 0;
             targetWorldPosition = chosen.worldPos;
+            targetObject = chosen.obj;
             hasTarget = true;
             isMoving = true;
             
@@ -101,6 +136,12 @@ public class Hamster : MonoBehaviour
             // Reached the end of the path
             isMoving = false;
             Debug.Log("Hamster reached target entry point!");
+            
+            // Trigger interaction with the target object
+            if (targetObject != null)
+            {
+                targetObject.OnInteract(this);
+            }
             return;
         }
         

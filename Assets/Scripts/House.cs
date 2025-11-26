@@ -1,13 +1,10 @@
 using System.Linq;
 using UnityEngine;
 
-public class Wheel : PlaceableObject
-{
+public class House : PlaceableObject {
     public GameObject[] Entries;
     public GameObject hamsterPosition;
-    public float rotationSpeed;
     public float interactionDuration;
-    public GameObject WheelMesh;
 
     public override Vector3[] GetEntryPoints()
     {
@@ -16,28 +13,21 @@ public class Wheel : PlaceableObject
 
     public override void OnInteract(Hamster hamster)
     {
-        StartCoroutine(WheelInteraction(hamster));
+        StartCoroutine(HouseInteraction(hamster));
     }
 
-    private System.Collections.IEnumerator WheelInteraction(Hamster hamster)
+    private System.Collections.IEnumerator HouseInteraction(Hamster hamster)
     {
         hamster.StartInteraction();
         
         // Store original position
         Vector3 originalPosition = hamster.transform.position;
         
-        // Place hamster at the wheel position
+        // Place hamster at the house position
         hamster.SetPosition(hamsterPosition.transform.position);
         
-        // Rotate the wheel for the interaction duration
-        float elapsedTime = 0f;
-        while (elapsedTime < interactionDuration)
-        {
-            // Rotate around Z axis
-            WheelMesh.transform.Rotate(0, 0, rotationSpeed * Time.deltaTime);
-            elapsedTime += Time.deltaTime;
-            yield return null;
-        }
+        // Wait for the interaction duration
+        yield return new UnityEngine.WaitForSeconds(interactionDuration);
         
         // Return hamster to original position
         hamster.SetPosition(originalPosition);

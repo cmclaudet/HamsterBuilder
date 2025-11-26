@@ -9,4 +9,8 @@ public class PlaceableObject : MonoBehaviour
     public virtual Vector3[] GetEntryPoints() {
         return new Vector3[] {};
     }
+
+    public virtual void OnInteract(Hamster hamster) {
+
+    }
 }
