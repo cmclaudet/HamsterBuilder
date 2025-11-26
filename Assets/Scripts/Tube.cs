@@ -4,6 +4,7 @@ public class Tube : PlaceableObject
 {
     public GameObject Entry1;
     public GameObject Entry2;
+    public GameObject[] Connections;
 
     public override Vector3[] GetEntryPoints()
     {
