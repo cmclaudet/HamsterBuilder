@@ -34,6 +34,10 @@ public class Hamster : MonoBehaviour
     private int tubePathIndex = 0;
     private Tube currentTube = null;
     private bool isBacktracking = false;
+    private Vector3 originalEntryPoint = Vector3.zero;
+    private Tube originalTube = null;
+    private List<Vector3> originalTubePath = null; // Store original path for backtracking
+    private bool isExitingToEntryPoint = false; // Flag to indicate we're moving to an entry point to exit
     
     void Start()
     {
@@ -101,13 +105,16 @@ public class Hamster : MonoBehaviour
     /// <summary>
     /// Starts tube traversal with the given waypoint path
     /// </summary>
-    public void StartTubeTraversal(List<Vector3> path, Tube tube, bool isBacktracking = false)
+    public void StartTubeTraversal(List<Vector3> path, Tube tube, bool isBacktracking = false, Vector3 entryPoint = default)
     {
         isInTube = true;
         tubePath = path;
         tubePathIndex = 0;
         currentTube = tube;
         this.isBacktracking = isBacktracking;
+        originalEntryPoint = entryPoint != default ? entryPoint : transform.position;
+        originalTube = tube;
+        originalTubePath = new List<Vector3>(path); // Store a copy for backtracking
         isMoving = true;
         
         Debug.Log($"Hamster starting tube traversal with {path.Count} waypoints (backtracking: {isBacktracking})");
@@ -125,6 +132,13 @@ public class Hamster : MonoBehaviour
         if (tubePath == null || tubePathIndex >= tubePath.Count)
         {
             // Reached the end of the tube path
+            if (isExitingToEntryPoint)
+            {
+                // We've completed moving to an entry point - fully exit
+                CompleteTubeExit();
+                return;
+            }
+            
             ExitTube();
             return;
         }
@@ -164,6 +178,103 @@ public class Hamster : MonoBehaviour
     /// </summary>
     private void ExitTube()
     {
+        // Determine the final tube and exit connection point
+        Vector3 exitConnectionPoint = transform.position; // Current position should be at the exit connection
+        Tube finalTube = FindTubeAtConnectionPoint(exitConnectionPoint);
+        
+        if (finalTube != null && originalTube != null)
+        {
+            // Determine the opposite entry point of the FINAL tube (the last tube in the path)
+            // We need to find which entry point of the final tube corresponds to where they entered it
+            // The exit connection point tells us which connection they're exiting from
+            Vector3 oppositeEntryPoint = GetOppositeEntryPoint(finalTube, exitConnectionPoint);
+            
+            Debug.Log($"Hamster exiting: finalTube={finalTube.gameObject.name}, exitConnectionPoint={exitConnectionPoint}, oppositeEntryPoint={oppositeEntryPoint}");
+            
+            // Check if the opposite entry point of the final tube is blocked (has a connected tube)
+            bool isOppositeEntryBlocked = IsEntryPointBlocked(finalTube, oppositeEntryPoint);
+            
+            if (!isOppositeEntryBlocked)
+            {
+                // Opposite entry point is available - move to it
+                Debug.Log($"Hamster exiting tube: moving to opposite entry point at {oppositeEntryPoint}");
+                List<Vector3> exitPath = new List<Vector3> { exitConnectionPoint, oppositeEntryPoint };
+                tubePath = exitPath;
+                tubePathIndex = 0;
+                isExitingToEntryPoint = true;
+                // Stay in tube state until we reach the entry point
+                return;
+            }
+            else
+            {
+                // Opposite entry point is blocked - backtrack to original entry point
+                Debug.Log($"Hamster exiting tube: opposite entry blocked, backtracking to original entry at {originalEntryPoint}");
+                
+                // Build backtrack path: reverse the entire path we took
+                List<Vector3> backtrackPath = new List<Vector3>();
+                
+                if (originalTubePath != null && originalTubePath.Count > 0)
+                {
+                    // Start from current exit connection point
+                    backtrackPath.Add(exitConnectionPoint);
+                    
+                    // Reverse the original path we stored
+                    List<Vector3> reversedPath = new List<Vector3>(originalTubePath);
+                    reversedPath.Reverse();
+                    
+                    // Add the reversed path (skip the first point if it's the same as exitConnectionPoint)
+                    int startIndex = 0;
+                    if (reversedPath.Count > 0 && Vector3.Distance(reversedPath[0], exitConnectionPoint) < 0.1f)
+                    {
+                        startIndex = 1;
+                    }
+                    
+                    for (int i = startIndex; i < reversedPath.Count; i++)
+                    {
+                        backtrackPath.Add(reversedPath[i]);
+                    }
+                    
+                    // Ensure we end at the original entry point (not the connection)
+                    if (backtrackPath.Count > 0)
+                    {
+                        Vector3 lastPoint = backtrackPath[backtrackPath.Count - 1];
+                        if (Vector3.Distance(lastPoint, originalEntryPoint) > 0.1f)
+                        {
+                            backtrackPath.Add(originalEntryPoint);
+                        }
+                        else
+                        {
+                            // Replace last point with actual entry point to ensure we're exactly there
+                            backtrackPath[backtrackPath.Count - 1] = originalEntryPoint;
+                        }
+                    }
+                }
+                else
+                {
+                    // Fallback: if we don't have the original path, try to go back through the original tube
+                    // Build path from exit connection back through original tube
+                    List<Vector3> reverseTubePath = originalTube.GetPathFromEntry(originalEntryPoint);
+                    reverseTubePath.Reverse();
+                    
+                    backtrackPath.Add(exitConnectionPoint);
+                    // If exit connection is not the same as the last point of reverse path, add the reverse path
+                    if (reverseTubePath.Count > 0 && Vector3.Distance(exitConnectionPoint, reverseTubePath[reverseTubePath.Count - 1]) > 0.1f)
+                    {
+                        backtrackPath.AddRange(reverseTubePath);
+                    }
+                    backtrackPath.Add(originalEntryPoint);
+                }
+                
+                tubePath = backtrackPath;
+                tubePathIndex = 0;
+                isBacktracking = true;
+                isExitingToEntryPoint = true; // We're backtracking to an entry point
+                Debug.Log($"Backtrack path has {backtrackPath.Count} waypoints");
+                return;
+            }
+        }
+        
+        // Fallback: exit normally
         isInTube = false;
         tubePath = null;
         tubePathIndex = 0;
@@ -176,11 +287,127 @@ public class Hamster : MonoBehaviour
         }
         
         isBacktracking = false;
+        originalEntryPoint = Vector3.zero;
+        originalTube = null;
+        originalTubePath = null;
+        isExitingToEntryPoint = false;
         
         Debug.Log("Hamster exited tube system");
         
         // Resume normal behavior - find a new target
         StartCoroutine(FindAndSetTarget());
+    }
+    
+    /// <summary>
+    /// Completes the tube exit process after reaching an entry point
+    /// </summary>
+    private void CompleteTubeExit()
+    {
+        isInTube = false;
+        tubePath = null;
+        tubePathIndex = 0;
+        isMoving = false;
+        
+        if (currentTube != null)
+        {
+            currentTube.OnInteractEnd(this);
+            currentTube = null;
+        }
+        
+        isBacktracking = false;
+        originalEntryPoint = Vector3.zero;
+        originalTube = null;
+        originalTubePath = null;
+        isExitingToEntryPoint = false;
+        
+        Debug.Log("Hamster completed tube exit at entry point");
+        
+        // Resume normal behavior - find a new target
+        StartCoroutine(FindAndSetTarget());
+    }
+    
+    /// <summary>
+    /// Finds which tube a connection point belongs to
+    /// </summary>
+    private Tube FindTubeAtConnectionPoint(Vector3 connectionPoint)
+    {
+        Tube[] allTubes = FindObjectsByType<Tube>(FindObjectsSortMode.None);
+        const float threshold = 0.1f;
+        
+        foreach (Tube tube in allTubes)
+        {
+            if (tube.Connection1 != null)
+            {
+                float dist1 = Vector3.Distance(connectionPoint, tube.Connection1.transform.position);
+                if (dist1 < threshold)
+                    return tube;
+            }
+            if (tube.Connection2 != null)
+            {
+                float dist2 = Vector3.Distance(connectionPoint, tube.Connection2.transform.position);
+                if (dist2 < threshold)
+                    return tube;
+            }
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
+    /// Gets the opposite entry point for a tube given an exit connection point
+    /// </summary>
+    private Vector3 GetOppositeEntryPoint(Tube tube, Vector3 exitConnectionPoint)
+    {
+        // Determine which connection this is
+        float distToConn1 = tube.Connection1 != null ? 
+            Vector3.Distance(exitConnectionPoint, tube.Connection1.transform.position) : float.MaxValue;
+        float distToConn2 = tube.Connection2 != null ? 
+            Vector3.Distance(exitConnectionPoint, tube.Connection2.transform.position) : float.MaxValue;
+        
+        if (distToConn1 < distToConn2)
+        {
+            // Exit is at Connection1, so opposite entry is Entry1
+            return tube.Entry1.transform.position;
+        }
+        else
+        {
+            // Exit is at Connection2, so opposite entry is Entry2
+            return tube.Entry2.transform.position;
+        }
+    }
+    
+    /// <summary>
+    /// Checks if an entry point is blocked (has a connected tube)
+    /// </summary>
+    private bool IsEntryPointBlocked(Tube tube, Vector3 entryPoint)
+    {
+        GameObject connectionAtEntry = tube.GetConnectionAtEntry(entryPoint);
+        List<Tube> connectedTubes = tube.FindConnectedTubesAtConnection(connectionAtEntry);
+        bool isBlocked = connectedTubes.Count > 0;
+        Debug.Log($"IsEntryPointBlocked: Tube {tube.gameObject.name}, EntryPoint {entryPoint}, Connection {connectionAtEntry.name}, ConnectedTubes: {connectedTubes.Count}, Blocked: {isBlocked}");
+        return isBlocked;
+    }
+    
+    /// <summary>
+    /// Gets the entry point that corresponds to a given connection point
+    /// </summary>
+    private Vector3 GetEntryPointForConnection(Tube tube, Vector3 connectionPoint)
+    {
+        float distToConn1 = tube.Connection1 != null ? 
+            Vector3.Distance(connectionPoint, tube.Connection1.transform.position) : float.MaxValue;
+        float distToConn2 = tube.Connection2 != null ? 
+            Vector3.Distance(connectionPoint, tube.Connection2.transform.position) : float.MaxValue;
+        
+        if (distToConn1 < distToConn2)
+        {
+            // Connection point is Connection1, so entry is Entry1
+            return tube.Entry1.transform.position;
+        }
+        else
+        {
+            // Connection point is Connection2, so entry is Entry2
+            return tube.Entry2.transform.position;
+        }
     }
     
     private IEnumerator FindAndSetTarget()

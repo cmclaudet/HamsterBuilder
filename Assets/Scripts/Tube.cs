@@ -90,6 +90,11 @@ public class Tube : PlaceableObject
         
         // End at the exit connection
         path.Add(endConnection.transform.position);
+        // if (enteringFromEntry1) {
+        //     path.Add(Entry2.transform.position);
+        // } else {
+        //     path.Add(Entry1.transform.position);
+        // }
         
         return path;
     }
@@ -232,19 +237,19 @@ public class Tube : PlaceableObject
         {
             // No unblocked exit - backtrack by reversing the path
             traversalPath.Reverse();
-            hamster.StartTubeTraversal(traversalPath, this, isBacktracking: true);
+            hamster.StartTubeTraversal(traversalPath, this, isBacktracking: true, entryPoint: entryPoint);
         }
         else if (traversalPath != null && traversalPath.Count > 0)
         {
             // Valid path found - start hamster on tube traversal
-            hamster.StartTubeTraversal(traversalPath, this);
+            hamster.StartTubeTraversal(traversalPath, this, isBacktracking: false, entryPoint: entryPoint);
         }
         else
         {
             // Fallback: just reverse this tube's path
             List<Vector3> reversePath = GetPathFromEntry(entryPoint);
             reversePath.Reverse();
-            hamster.StartTubeTraversal(reversePath, this, isBacktracking: true);
+            hamster.StartTubeTraversal(reversePath, this, isBacktracking: true, entryPoint: entryPoint);
         }
     }
 }
