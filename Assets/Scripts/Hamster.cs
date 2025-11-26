@@ -28,6 +28,13 @@ public class Hamster : MonoBehaviour
     private PlaceableObject targetObject;
     private Dictionary<ObjectType, float> lastInteractionTime = new Dictionary<ObjectType, float>();
     
+    // Tube traversal state
+    private bool isInTube = false;
+    private List<Vector3> tubePath = null;
+    private int tubePathIndex = 0;
+    private Tube currentTube = null;
+    private bool isBacktracking = false;
+    
     void Start()
     {
         gridManager = FindObjectsByType<GridManager>(FindObjectsSortMode.None).First();
@@ -37,7 +44,11 @@ public class Hamster : MonoBehaviour
     
     void Update()
     {
-        if (isMoving && hasTarget && !isInteracting && !isChillingOut)
+        if (isInTube)
+        {
+            MoveThroughTube();
+        }
+        else if (isMoving && hasTarget && !isInteracting && !isChillingOut)
         {
             MoveAlongPath();
         }
@@ -77,12 +88,108 @@ public class Hamster : MonoBehaviour
             targetObject.OnInteractEnd(this);
             targetObject = null;
         }
+        
+        // If we were in a tube, exit tube state
+        if (isInTube)
+        {
+            ExitTube();
+        }
+        
+        StartCoroutine(FindAndSetTarget());
+    }
+    
+    /// <summary>
+    /// Starts tube traversal with the given waypoint path
+    /// </summary>
+    public void StartTubeTraversal(List<Vector3> path, Tube tube, bool isBacktracking = false)
+    {
+        isInTube = true;
+        tubePath = path;
+        tubePathIndex = 0;
+        currentTube = tube;
+        this.isBacktracking = isBacktracking;
+        isMoving = true;
+        
+        Debug.Log($"Hamster starting tube traversal with {path.Count} waypoints (backtracking: {isBacktracking})");
+        for (int i = 0; i < path.Count; i++)
+        {
+            Debug.Log($"  Waypoint {i}: {path[i]}");
+        }
+    }
+    
+    /// <summary>
+    /// Moves the hamster through the tube using waypoint-based movement
+    /// </summary>
+    private void MoveThroughTube()
+    {
+        if (tubePath == null || tubePathIndex >= tubePath.Count)
+        {
+            // Reached the end of the tube path
+            ExitTube();
+            return;
+        }
+        
+        // Get the current target waypoint
+        Vector3 targetWaypoint = tubePath[tubePathIndex];
+        
+        // Move towards the target waypoint
+        Vector3 direction = (targetWaypoint - transform.position).normalized;
+        
+        // Rotate to face the movement direction
+        if (direction != Vector3.zero)
+        {
+            direction.y = 0; // Keep rotation on horizontal plane
+            direction.Normalize();
+            SetFacingRotation(direction);
+        }
+        
+        // Move towards waypoint
+        transform.position += direction * moveSpeed * Time.deltaTime;
+        
+        // Check if we've reached the current waypoint
+        float distanceToWaypoint = Vector3.Distance(
+            new Vector3(transform.position.x, 0, transform.position.z),
+            new Vector3(targetWaypoint.x, 0, targetWaypoint.z)
+        );
+        
+        if (distanceToWaypoint < 0.1f)
+        {
+            // Move to next waypoint
+            tubePathIndex++;
+        }
+    }
+    
+    /// <summary>
+    /// Exits tube traversal state and resumes normal behavior
+    /// </summary>
+    private void ExitTube()
+    {
+        isInTube = false;
+        tubePath = null;
+        tubePathIndex = 0;
+        isMoving = false;
+        
+        if (currentTube != null)
+        {
+            currentTube.OnInteractEnd(this);
+            currentTube = null;
+        }
+        
+        isBacktracking = false;
+        
+        Debug.Log("Hamster exited tube system");
+        
+        // Resume normal behavior - find a new target
         StartCoroutine(FindAndSetTarget());
     }
     
     private IEnumerator FindAndSetTarget()
     {
         yield return new WaitForSeconds(moveDelay);
+        
+        // Don't find new targets while in a tube
+        if (isInTube)
+            yield break;
         
         // Roll for chill out probability
         if (Random.Range(0f, 1f) < chillOutProbability)
