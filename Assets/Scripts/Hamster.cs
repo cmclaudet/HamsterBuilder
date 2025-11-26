@@ -76,12 +76,16 @@ public class Hamster : MonoBehaviour
         // Get hamster's current grid position
         Vector2Int hamsterGridPos = gridManager.WorldToGrid(transform.position);
         
-        // List to store valid entry points with their paths
-        List<(Vector3 worldPos, List<Vector2Int> path, PlaceableObject obj)> validEntryPoints = new List<(Vector3, List<Vector2Int>, PlaceableObject)>();
+        // Dictionary to store objects with their valid entry points
+        // Key: PlaceableObject, Value: List of (worldPos, path) tuples
+        Dictionary<PlaceableObject, List<(Vector3 worldPos, List<Vector2Int> path)>> objectsWithValidEntryPoints = 
+            new Dictionary<PlaceableObject, List<(Vector3, List<Vector2Int>)>>();
         
         foreach (PlaceableObject obj in allObjects)
         {
             Vector3[] entryPoints = obj.GetEntryPoints();
+            List<(Vector3 worldPos, List<Vector2Int> path)> validEntryPointsForThisObject = 
+                new List<(Vector3, List<Vector2Int>)>();
             
             foreach (Vector3 entryPoint in entryPoints)
             {
@@ -102,25 +106,39 @@ public class Hamster : MonoBehaviour
                 
                 if (path != null && path.Count > 0)
                 {
-                    validEntryPoints.Add((entryPoint, path, obj));
+                    validEntryPointsForThisObject.Add((entryPoint, path));
                 }
+            }
+            
+            // Only add objects that have at least one valid entry point
+            if (validEntryPointsForThisObject.Count > 0)
+            {
+                objectsWithValidEntryPoints[obj] = validEntryPointsForThisObject;
             }
         }
         
-        // If we have valid entry points, pick one at random
-        if (validEntryPoints.Count > 0)
+        // If we have objects with valid entry points, pick one object at random
+        if (objectsWithValidEntryPoints.Count > 0)
         {
-            int randomIndex = Random.Range(0, validEntryPoints.Count);
-            var chosen = validEntryPoints[randomIndex];
+            // Randomly choose one object from all objects with valid entry points
+            List<PlaceableObject> validObjects = new List<PlaceableObject>(objectsWithValidEntryPoints.Keys);
+            int randomObjectIndex = Random.Range(0, validObjects.Count);
+            PlaceableObject chosenObject = validObjects[randomObjectIndex];
             
-            currentPath = chosen.path;
+            // Randomly choose one entry point from the chosen object's valid entry points
+            List<(Vector3 worldPos, List<Vector2Int> path)> entryPointsForChosenObject = 
+                objectsWithValidEntryPoints[chosenObject];
+            int randomEntryIndex = Random.Range(0, entryPointsForChosenObject.Count);
+            var chosenEntry = entryPointsForChosenObject[randomEntryIndex];
+            
+            currentPath = chosenEntry.path;
             currentPathIndex = 0;
-            targetWorldPosition = chosen.worldPos;
-            targetObject = chosen.obj;
+            targetWorldPosition = chosenEntry.worldPos;
+            targetObject = chosenObject;
             hasTarget = true;
             isMoving = true;
             
-            Debug.Log($"Hamster found {validEntryPoints.Count} valid entry points, chose one at {targetWorldPosition}");
+            Debug.Log($"Hamster found {objectsWithValidEntryPoints.Count} objects with valid entry points, chose object with {entryPointsForChosenObject.Count} entry points, selected entry at {targetWorldPosition}");
         }
         else
         {
