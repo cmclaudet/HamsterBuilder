@@ -13,6 +13,7 @@ public class House : PlaceableObject {
 
     public override void OnInteract(Hamster hamster)
     {
+        base.OnInteract(hamster);
         StartCoroutine(HouseInteraction(hamster));
     }
 

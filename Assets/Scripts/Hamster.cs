@@ -20,6 +20,7 @@ public class Hamster : MonoBehaviour
     private bool isInteracting = false;
     private int foodPieceCount;
     private PlaceableObject targetObject;
+    private Dictionary<ObjectType, float> lastInteractionTime = new Dictionary<ObjectType, float>();
     
     void Start()
     {
@@ -64,6 +65,12 @@ public class Hamster : MonoBehaviour
     {
         isInteracting = false;
         hasTarget = false;
+        if (targetObject != null) {
+            // Record the interaction time for this object type
+            lastInteractionTime[targetObject.objectType] = Time.time;
+            targetObject.OnInteractEnd(this);
+            targetObject = null;
+        }
         StartCoroutine(FindAndSetTarget());
     }
     
@@ -117,13 +124,53 @@ public class Hamster : MonoBehaviour
             }
         }
         
-        // If we have objects with valid entry points, pick one object at random
+        // If we have objects with valid entry points, prioritize and pick one
         if (objectsWithValidEntryPoints.Count > 0)
         {
-            // Randomly choose one object from all objects with valid entry points
-            List<PlaceableObject> validObjects = new List<PlaceableObject>(objectsWithValidEntryPoints.Keys);
-            int randomObjectIndex = Random.Range(0, validObjects.Count);
-            PlaceableObject chosenObject = validObjects[randomObjectIndex];
+            // Create a list of objects with their priority scores
+            List<(PlaceableObject obj, float priority)> prioritizedObjects = 
+                new List<(PlaceableObject, float)>();
+            
+            float currentTime = Time.time;
+            
+            foreach (PlaceableObject obj in objectsWithValidEntryPoints.Keys)
+            {
+                float priority = 0f;
+                
+                // Priority 1: Objects with empty hamstersInteracting lists get higher priority
+                // (multiply by 1000 to ensure this is the primary factor)
+                if (obj.hamstersInteracting.Count == 0)
+                {
+                    priority += 1000f;
+                }
+                
+                // Priority 2: Objects of types interacted with longest ago get higher priority
+                // Get time since last interaction (or use a very large value if never interacted)
+                float timeSinceLastInteraction = float.MaxValue;
+                if (lastInteractionTime.ContainsKey(obj.objectType))
+                {
+                    timeSinceLastInteraction = currentTime - lastInteractionTime[obj.objectType];
+                }
+                
+                // Add time since last interaction to priority (longer = higher priority)
+                priority += timeSinceLastInteraction;
+                
+                prioritizedObjects.Add((obj, priority));
+            }
+            
+            // Sort by priority (descending - highest priority first)
+            prioritizedObjects.Sort((a, b) => b.priority.CompareTo(a.priority));
+            
+            // Get the highest priority objects (may be multiple with same priority)
+            float highestPriority = prioritizedObjects[0].priority;
+            List<PlaceableObject> highestPriorityObjects = prioritizedObjects
+                .Where(x => Mathf.Approximately(x.priority, highestPriority))
+                .Select(x => x.obj)
+                .ToList();
+            
+            // Randomly choose from the highest priority objects
+            int randomObjectIndex = Random.Range(0, highestPriorityObjects.Count);
+            PlaceableObject chosenObject = highestPriorityObjects[randomObjectIndex];
             
             // Randomly choose one entry point from the chosen object's valid entry points
             List<(Vector3 worldPos, List<Vector2Int> path)> entryPointsForChosenObject = 

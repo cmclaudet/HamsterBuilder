@@ -19,6 +19,7 @@ public class Food : PlaceableObject {
 
     public override void OnInteract(Hamster hamster)
     {
+        base.OnInteract(hamster);
         StartCoroutine(FoodInteraction(hamster));
     }
 

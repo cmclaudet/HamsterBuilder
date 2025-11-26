@@ -18,6 +18,7 @@ public class Wheel : PlaceableObject
 
     public override void OnInteract(Hamster hamster)
     {
+        base.OnInteract(hamster);
         StartCoroutine(WheelInteraction(hamster));
     }
 

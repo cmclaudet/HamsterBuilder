@@ -1,4 +1,5 @@
 
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PlaceableObject : MonoBehaviour 
@@ -7,6 +8,7 @@ public class PlaceableObject : MonoBehaviour
     public ObjectType objectType;
     public int[] ViableRotations;
     private int currentRotationIndex;
+    public HashSet<Hamster> hamstersInteracting = new HashSet<Hamster>();
 
     void Start() {
         if (ViableRotations == null || ViableRotations.Length == 0) {
@@ -20,7 +22,13 @@ public class PlaceableObject : MonoBehaviour
     }
 
     public virtual void OnInteract(Hamster hamster) {
+        hamstersInteracting.Add(hamster);
+    }
 
+    public virtual void OnInteractEnd(Hamster hamster) {
+        if (hamstersInteracting.Contains(hamster)) {
+            hamstersInteracting.Remove(hamster);
+        }
     }
 
     public int Rotate() {
