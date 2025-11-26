@@ -9,6 +9,10 @@ public class Hamster : MonoBehaviour
     public float lookDistance = 10f;
     public float moveDelay = 2f;
     public GridManager gridManager;
+    public float chillOutProbability = 0.4f;
+    public float chillOutLookDistance = 3f;
+    public float chillOutMinDuration = 4f;
+    public float chillOutMaxDuration = 10f;
     
     private Vector3 frontFaceDirection = new(0, 0, 1);
     private Vector2Int gridSize = new(1, 1);
@@ -18,6 +22,8 @@ public class Hamster : MonoBehaviour
     private bool hasTarget = false;
     private bool isMoving = false;
     private bool isInteracting = false;
+    private bool isGoingToChillOut = false;
+    private bool isChillingOut = false;
     private int foodPieceCount;
     private PlaceableObject targetObject;
     private Dictionary<ObjectType, float> lastInteractionTime = new Dictionary<ObjectType, float>();
@@ -31,7 +37,7 @@ public class Hamster : MonoBehaviour
     
     void Update()
     {
-        if (isMoving && hasTarget && !isInteracting)
+        if (isMoving && hasTarget && !isInteracting && !isChillingOut)
         {
             MoveAlongPath();
         }
@@ -77,6 +83,15 @@ public class Hamster : MonoBehaviour
     private IEnumerator FindAndSetTarget()
     {
         yield return new WaitForSeconds(moveDelay);
+        
+        // Roll for chill out probability
+        if (Random.Range(0f, 1f) < chillOutProbability)
+        {
+            // Hamster should chill out
+            yield return StartCoroutine(GoToChillOut());
+            yield break;
+        }
+        
         // Find all PlaceableObjects in the scene
         PlaceableObject[] allObjects = FindObjectsByType<PlaceableObject>(FindObjectsSortMode.None);
         
@@ -201,12 +216,17 @@ public class Hamster : MonoBehaviour
         {
             // Reached the end of the path
             isMoving = false;
-            Debug.Log("Hamster reached target entry point!");
             
-            // Trigger interaction with the target object
+            // If we have a target object, interact with it
             if (targetObject != null)
             {
+                Debug.Log("Hamster reached target entry point!");
                 targetObject.OnInteract(this);
+            }
+            // Otherwise, if we're chilling out, start the chill out coroutine
+            else if (isGoingToChillOut)
+            {
+                StartCoroutine(ChillOut());
             }
             return;
         }
@@ -266,5 +286,54 @@ public class Hamster : MonoBehaviour
                 transform.rotation = Quaternion.Euler(0, eulerAngles.y, 0);
             }
         }
+    }
+    
+    private IEnumerator GoToChillOut()
+    {
+        hasTarget = false;
+        isMoving = false;
+        
+        // Try to find a reachable spot using GetRandomPath
+        List<Vector2Int> chillPath = gridManager.GetRandomPath(transform.position, chillOutLookDistance);
+        
+        if (chillPath != null && chillPath.Count > 0)
+        {
+            // Found a valid path, follow it
+            Debug.Log($"Hamster found a chill spot, following path to end position {chillPath[chillPath.Count - 1]}");
+            currentPath = chillPath;
+            currentPathIndex = 0;
+            targetWorldPosition = gridManager.GridToWorldCenter(chillPath[chillPath.Count - 1]);
+            targetObject = null; // No object to interact with
+            hasTarget = true;
+            isMoving = true;
+            isGoingToChillOut = true;
+            
+            // Wait until the hamster reaches the destination (handled in MoveAlongPath)
+            // The MoveAlongPath will call ChillOutAtDestination when path is complete
+            yield break;
+        }
+        else
+        {
+            // No valid path found, chill out where we are
+            Debug.Log("Hamster chilling out at current location");
+            yield return StartCoroutine(ChillOut());
+        }
+    }
+    
+    private IEnumerator ChillOut()
+    {
+        isGoingToChillOut = false;
+        // Calculate random chill duration
+        float chillDuration = Random.Range(chillOutMinDuration, chillOutMaxDuration);
+        
+        Debug.Log($"Hamster chilling out for {chillDuration} seconds");
+        isChillingOut = true;
+        
+        // Wait for the chill duration
+        yield return new WaitForSeconds(chillDuration);
+        
+        // Done chilling out, find a new target
+        isChillingOut = false;
+        StartCoroutine(FindAndSetTarget());
     }
 }

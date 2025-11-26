@@ -77,6 +77,60 @@ public class GridManager : MonoBehaviour
         // Convert grid coordinates to world position (cell center)
         return GridToWorld(gridPos, Vector2Int.one);
     }
+
+    /// <summary>
+    /// Tries to find a random valid path from worldPosition to a point within the radius from worldPosition.
+    /// Radius is distance from worldPosition along the XZ plane only.
+    /// Method picks a random angle from 0 to 360, and a random distance from 0 to radius, gets the corresponding grid position, translates worldPosition to grid position, and checks if a path is valid.
+    /// If path is not valid attempt picking a random angle and distance again, up to "attempt" times.
+    /// Returns a list of grid positions representing the path, or null if no path exists.
+    /// </summary>
+    public List<Vector2Int> GetRandomPath(Vector3 worldPosition, float radius, int attempts = 15) {
+        // Convert world position to grid position
+        Vector2Int startGridPos = WorldToGrid(worldPosition);
+        
+        // Check if start position is valid
+        if (!IsWithinBounds(startGridPos))
+            return null;
+        
+        // Try to find a valid path up to 'attempts' times
+        for (int attempt = 0; attempt < attempts; attempt++)
+        {
+            // Pick a random angle from 0 to 360 degrees
+            float randomAngle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+            
+            // Pick a random distance from 0 to radius
+            float randomDistance = Random.Range(0f, radius);
+            
+            // Calculate target world position using the angle and distance (XZ plane only)
+            float targetX = worldPosition.x + randomDistance * Mathf.Cos(randomAngle);
+            float targetZ = worldPosition.z + randomDistance * Mathf.Sin(randomAngle);
+            Vector3 targetWorldPos = new Vector3(targetX, worldPosition.y, targetZ);
+            
+            // Convert target world position to grid position
+            Vector2Int endGridPos = WorldToGrid(targetWorldPos);
+            
+            // Check if end position is within bounds
+            if (!IsWithinBounds(endGridPos))
+                continue;
+            
+            // Check if end position is occupied
+            if (IsCellOccupied(endGridPos))
+                continue;
+            
+            // Try to find a path from start to end
+            List<Vector2Int> path = FindPath(startGridPos, endGridPos);
+            
+            // If a valid path was found, return it
+            if (path != null && path.Count > 0)
+            {
+                return path;
+            }
+        }
+        
+        // No valid path found after all attempts
+        return null;
+    }
     
     /// <summary>
     /// Find a path from start grid position to end grid position using A* pathfinding.

@@ -105,6 +105,10 @@ MonoBehaviour:
   lookDistance: 10
   moveDelay: 2
   gridManager: {fileID: 0}
+  chillOutProbability: 0.4
+  chillOutLookDistance: 3
+  chillOutMinDuration: 1
+  chillOutMaxDuration: 4
 --- !u!1001 &6782224075982526199
 PrefabInstance:
   m_ObjectHideFlags: 0
