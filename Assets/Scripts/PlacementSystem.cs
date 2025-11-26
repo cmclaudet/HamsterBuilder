@@ -165,8 +165,8 @@ public class PlacementSystem : MonoBehaviour
     {
         if (previewObject != null) {
             Debug.Log("Rotate!");
-            previewObject.transform.Rotate(new Vector3(0, 90, 0), Space.World);
-            currentRotation = (currentRotation + 90) % 360;
+            var placeable = previewObject.GetComponent<PlaceableObject>();
+            currentRotation = placeable.Rotate();
         }
     }
     

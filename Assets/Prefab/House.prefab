@@ -81,6 +81,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   meshCollider: {fileID: 212538240034076319}
   objectType: 2
+  ViableRotations: 00000000a6ffffff
   Entries:
   - {fileID: 9028969207510315815}
   - {fileID: 9050515910598028891}
