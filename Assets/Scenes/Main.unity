@@ -1448,7 +1448,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   spawnFrequency: 2
-  hamsterPrefab: {fileID: 3466909786312617345, guid: e3fc14e3161ed4e58bdb6174924d6f5e, type: 3}
+  hamsterPrefab: {fileID: 357164447308620478, guid: bfffe0acb592344beb31d0a1374a5d7f, type: 3}
   hamsterSpawnPosition: {fileID: 2017166908}
 --- !u!1 &2044039563
 GameObject:
