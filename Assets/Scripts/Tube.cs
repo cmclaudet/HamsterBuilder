@@ -51,6 +51,14 @@ public class Tube : PlaceableObject
     }
 
     /// <summary>
+    /// Gets the opposite entry point position (Entry1 <-> Entry2)
+    /// </summary>
+    public Vector3 GetOppositeEntryPoint(Vector3 entryPoint)
+    {
+        return IsEntry1(entryPoint) ? Entry2.transform.position : Entry1.transform.position;
+    }
+
+    /// <summary>
     /// Gets the path through this tube starting from the given entry point.
     /// Returns a list of Vector3 positions: [connection] -> [waypoints] -> [exit connection]
     /// </summary>
@@ -90,11 +98,6 @@ public class Tube : PlaceableObject
         
         // End at the exit connection
         path.Add(endConnection.transform.position);
-        // if (enteringFromEntry1) {
-        //     path.Add(Entry2.transform.position);
-        // } else {
-        //     path.Add(Entry1.transform.position);
-        // }
         
         return path;
     }
@@ -215,7 +218,27 @@ public class Tube : PlaceableObject
         }
         else
         {
-            // No connected tube - this is an unblocked exit
+            // No connected tube - check if the exit entry point is actually unblocked
+            // Get the opposite entry point (where the hamster would exit)
+            Vector3 oppositeEntryPoint = GetOppositeEntryPoint(entryPoint);
+            
+            // Check if the exit entry point's grid cell is occupied
+            GridManager gridManager = FindObjectsByType<GridManager>(FindObjectsSortMode.None).FirstOrDefault();
+            if (gridManager != null)
+            {
+                Vector2Int exitGridPos = gridManager.WorldToGrid(oppositeEntryPoint);
+                bool isExitBlocked = !gridManager.IsWithinBounds(exitGridPos) || gridManager.IsCellOccupied(exitGridPos);
+                
+                if (isExitBlocked)
+                {
+                    // Exit entry point is blocked by another object - need to backtrack
+                    Debug.Log($"Tube {gameObject.name}: Exit entry point at {oppositeEntryPoint} is blocked (grid cell {exitGridPos} is occupied), backtracking");
+                    return (fullPath, true);
+                }
+            }
+            
+            // No connected tube and exit entry point is not blocked - this is an unblocked exit
+            Debug.Log($"Tube {gameObject.name}: Exit entry point at {oppositeEntryPoint} is unblocked");
             return (fullPath, false);
         }
     }
