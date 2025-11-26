@@ -159,31 +159,9 @@ public class Hamster : MonoBehaviour
         {
             direction.y = 0; // Keep rotation on horizontal plane
             direction.Normalize();
-            
-            if (direction != Vector3.zero)
-            {
-                // Transform frontFaceDirection from local space to world space
-                Vector3 worldFrontFaceDirection = transform.rotation * frontFaceDirection.normalized;
-                worldFrontFaceDirection.y = 0; // Keep on horizontal plane
-                worldFrontFaceDirection.Normalize();
-                
-                // Calculate rotation to align frontFaceDirection with movement direction (Y-axis only)
-                if (worldFrontFaceDirection != Vector3.zero)
-                {
-                    // Calculate the angle between current forward and target direction in XZ plane
-                    float angle = Vector3.SignedAngle(worldFrontFaceDirection, direction, Vector3.up);
-                    
-                    // Create rotation around Y axis only
-                    Quaternion yRotation = Quaternion.Euler(0, angle, 0);
-                    transform.rotation = yRotation * transform.rotation;
-                    
-                    // Ensure rotation is constrained to Y axis by extracting only Y component
-                    Vector3 eulerAngles = transform.rotation.eulerAngles;
-                    transform.rotation = Quaternion.Euler(0, eulerAngles.y, 0);
-                }
-            }
+            SetFacingRotation(direction);
         }
-        
+
         transform.position += direction * moveSpeed * Time.deltaTime;
         
         // Check if we've reached the current waypoint
@@ -196,6 +174,32 @@ public class Hamster : MonoBehaviour
         {
             // Move to next waypoint
             currentPathIndex++;
+        }
+    }
+
+    public void SetFacingRotation(Vector3 direction)
+    {
+        if (direction != Vector3.zero)
+        {
+            // Transform frontFaceDirection from local space to world space
+            Vector3 worldFrontFaceDirection = transform.rotation * frontFaceDirection.normalized;
+            worldFrontFaceDirection.y = 0; // Keep on horizontal plane
+            worldFrontFaceDirection.Normalize();
+
+            // Calculate rotation to align frontFaceDirection with movement direction (Y-axis only)
+            if (worldFrontFaceDirection != Vector3.zero)
+            {
+                // Calculate the angle between current forward and target direction in XZ plane
+                float angle = Vector3.SignedAngle(worldFrontFaceDirection, direction, Vector3.up);
+
+                // Create rotation around Y axis only
+                Quaternion yRotation = Quaternion.Euler(0, angle, 0);
+                transform.rotation = yRotation * transform.rotation;
+
+                // Ensure rotation is constrained to Y axis by extracting only Y component
+                Vector3 eulerAngles = transform.rotation.eulerAngles;
+                transform.rotation = Quaternion.Euler(0, eulerAngles.y, 0);
+            }
         }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using UnityEngine;
 
@@ -8,6 +9,7 @@ public class Wheel : PlaceableObject
     public float rotationSpeed;
     public float interactionDuration;
     public GameObject WheelMesh;
+    private Vector3 hamsterFaceDirection = new(-1, 0, 0);
 
     public override Vector3[] GetEntryPoints()
     {
@@ -22,6 +24,7 @@ public class Wheel : PlaceableObject
     private System.Collections.IEnumerator WheelInteraction(Hamster hamster)
     {
         hamster.StartInteraction();
+        SetHamsterRotation(hamster);
         
         // Store original position
         Vector3 originalPosition = hamster.transform.position;
@@ -43,5 +46,16 @@ public class Wheel : PlaceableObject
         hamster.SetPosition(originalPosition);
         
         hamster.EndInteraction();
+    }
+
+    private void SetHamsterRotation(Hamster hamster)
+    {
+        // Transform hamsterFaceDirection from wheel's local space to world space
+        // This accounts for the wheel's current Y rotation
+        Vector3 worldDirection = transform.TransformDirection(hamsterFaceDirection.normalized);
+        worldDirection.y = 0; // Keep on horizontal plane
+        worldDirection.Normalize();
+        
+        hamster.SetFacingRotation(worldDirection);
     }
 }
