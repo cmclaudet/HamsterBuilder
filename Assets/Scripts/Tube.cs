@@ -177,6 +177,9 @@ public class Tube : PlaceableObject
         if (connectedTubes.Count > 0)
         {
             // Try each connected tube until we find one with an unblocked exit
+            // Track the longest path explored in case all need backtracking
+            List<Vector3> longestExploredPath = fullPath;
+            
             foreach (Tube nextTube in connectedTubes)
             {
                 // Determine which entry point of the next tube corresponds to the connection
@@ -208,13 +211,21 @@ public class Tube : PlaceableObject
                     Debug.Log($"Tube {gameObject.name}: Found unblocked exit through connection to {nextTube.gameObject.name}, path length: {nextPath.Count}");
                     return (nextPath, false);
                 }
-                // If this branch needs backtracking, try the next connection
+                
+                // If this branch needs backtracking, track the longest path explored
+                if (nextPath != null && nextPath.Count > longestExploredPath.Count)
+                {
+                    longestExploredPath = nextPath;
+                }
+                
+                // Try the next connection
                 Debug.Log($"Tube {gameObject.name}: Connection to {nextTube.gameObject.name} needs backtracking, trying next connection");
             }
             
             // All connections lead to dead ends - need to backtrack
-            Debug.Log($"Tube {gameObject.name}: All {connectedTubes.Count} connections lead to dead ends, backtracking");
-            return (fullPath, true);
+            // Return the longest path we explored so the hamster travels through all connected tubes before backtracking
+            Debug.Log($"Tube {gameObject.name}: All {connectedTubes.Count} connections lead to dead ends, backtracking. Longest path length: {longestExploredPath.Count}");
+            return (longestExploredPath, true);
         }
         else
         {
