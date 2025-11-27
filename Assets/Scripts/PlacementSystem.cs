@@ -8,6 +8,7 @@ public class PlacementSystem : MonoBehaviour
     public Camera mainCamera;
     public Material previewMaterial;
     public GridManager gridManager;
+    public HamsterSpawner hamsterSpawner;
     
     private PlaceableObjectDefinition currentPlaceableObject;
     private GameObject previewObject;
@@ -35,6 +36,14 @@ public class PlacementSystem : MonoBehaviour
         if (mainCamera == null)
         {
             mainCamera = Camera.main;
+        }
+        if (hamsterSpawner != null) {
+            // preplace hamster spawner
+            PlacedObjectData placedData = hamsterSpawner.gameObject.AddComponent<PlacedObjectData>();
+            placedData.gridPosition = gridManager.WorldToGrid(hamsterSpawner.transform.position);
+            placedData.gridSize = new Vector2Int(1, 1);
+        
+            gridManager.OccupyCells(placedData.gridPosition, new Vector2Int(1, 1));
         }
     }
     
@@ -104,6 +113,11 @@ public class PlacementSystem : MonoBehaviour
     {
         isEditingEnabled = false;
         CancelPlacement();
+    }
+    
+    public void EnableEditing()
+    {
+        isEditingEnabled = true;
     }
 
     public void StartPlacement(PlaceableObjectDefinition placeableObject)
@@ -205,9 +219,9 @@ public class PlacementSystem : MonoBehaviour
     {
         if (draggedObject != null)
         {
+            var placeableObj = draggedObject.GetComponent<PlaceableObject>();
             Debug.Log("Rotate dragged object!");
-            draggedObject.transform.Rotate(new Vector3(0, 90, 0), Space.World);
-            dragRotation = (dragRotation + 90) % 360;
+            dragRotation = placeableObj.Rotate();
         }
     }
     
