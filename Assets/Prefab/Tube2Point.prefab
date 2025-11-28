@@ -127,8 +127,8 @@ Transform:
   - {fileID: 5789043928994506180}
   - {fileID: 484661723033595666}
   - {fileID: 2863299439108771249}
-  - {fileID: 7087257133897219567}
   - {fileID: 5876370462867432598}
+  - {fileID: 7087257133897219567}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &4212940373879302880
@@ -146,11 +146,13 @@ MonoBehaviour:
   meshCollider: {fileID: 4934768073154303484}
   objectType: 0
   ViableRotations: 
-  Entry1: {fileID: 2134522916228542233}
-  Entry2: {fileID: 5182285887895994637}
+  Entries:
+  - {fileID: 2134522916228542233}
+  - {fileID: 5182285887895994637}
+  Connections:
+  - {fileID: 8303697035293874422}
+  - {fileID: 4608446414330315249}
   Waypoint: {fileID: 8632906736874797207}
-  Connection1: {fileID: 8303697035293874422}
-  Connection2: {fileID: 4608446414330315249}
 --- !u!1 &8303697035293874422
 GameObject:
   m_ObjectHideFlags: 0

@@ -210,11 +210,15 @@ MonoBehaviour:
   meshCollider: {fileID: 2234700215807530581}
   objectType: 0
   ViableRotations: 
-  Entry1: {fileID: 0}
-  Entry2: {fileID: 0}
+  Entries:
+  - {fileID: 5805879533862305627}
+  - {fileID: 7366425369326374691}
+  - {fileID: 4652547837272429181}
+  Connections:
+  - {fileID: 3828473152050144687}
+  - {fileID: 8110583017124883243}
+  - {fileID: 8803757736697091417}
   Waypoint: {fileID: 4309434116904547010}
-  Connection1: {fileID: 0}
-  Connection2: {fileID: 0}
 --- !u!1 &8110583017124883243
 GameObject:
   m_ObjectHideFlags: 0

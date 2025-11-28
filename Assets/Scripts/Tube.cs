@@ -4,34 +4,45 @@ using System.Linq;
 
 public class Tube : PlaceableObject
 {
-    public GameObject Entry1;
-    public GameObject Entry2;
+    // entries and connections should be the same length. They are paired so that an entry and its corresponding connection can be found by index
+    public GameObject[] Entries;
+    public GameObject[] Connections;
 
-    // waypoint is pass through point between entries
+    // waypoint is pass through point for every entry -> entry combination
     public GameObject Waypoint;
     
-    // start path at connection1 if hamster enters from entry1
-    public GameObject Connection1;
-
-    // start path at connection2 if hamster enters from entry2
-    public GameObject Connection2;
-
     // Threshold distance for detecting tube connections
     private const float CONNECTION_THRESHOLD = 0.1f;
 
     public override Vector3[] GetEntryPoints()
     {
-        return new Vector3[] {Entry1.transform.position, Entry2.transform.position};
+        Vector3[] entryPoints = new Vector3[Entries.Length];
+        for (int i = 0; i < Entries.Length; i++)
+        {
+            entryPoints[i] = Entries[i].transform.position;
+        }
+        return entryPoints;
     }
 
     /// <summary>
-    /// Determines which entry point (Entry1 or Entry2) the given world position is closest to
+    /// Finds the index of the entry point closest to the given world position
     /// </summary>
-    public bool IsEntry1(Vector3 worldPosition)
+    public int GetClosestEntryIndex(Vector3 worldPosition)
     {
-        float distToEntry1 = Vector3.Distance(worldPosition, Entry1.transform.position);
-        float distToEntry2 = Vector3.Distance(worldPosition, Entry2.transform.position);
-        return distToEntry1 < distToEntry2;
+        int closestIndex = 0;
+        float minDistance = Vector3.Distance(worldPosition, Entries[0].transform.position);
+
+        for (int i = 1; i < Entries.Length; i++)
+        {
+            float distance = Vector3.Distance(worldPosition, Entries[i].transform.position);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestIndex = i;
+            }
+        }
+
+        return closestIndex;
     }
 
     /// <summary>
@@ -39,46 +50,70 @@ public class Tube : PlaceableObject
     /// </summary>
     public GameObject GetConnectionAtEntry(Vector3 entryPoint)
     {
-        return IsEntry1(entryPoint) ? Connection1 : Connection2;
+        int entryIndex = GetClosestEntryIndex(entryPoint);
+        return Connections[entryIndex];
     }
 
     /// <summary>
-    /// Gets the exit connection (opposite of entry connection)
+    /// Gets a randomly selected exit connection (excluding the entry connection)
     /// </summary>
     public GameObject GetExitConnection(Vector3 entryPoint)
     {
-        return IsEntry1(entryPoint) ? Connection2 : Connection1;
+        int entryIndex = GetClosestEntryIndex(entryPoint);
+
+        // If only 2 entries, return the opposite one
+        if (Entries.Length == 2)
+        {
+            return Connections[1 - entryIndex];
+        }
+
+        // For more than 2 entries, randomly pick one that isn't the entry
+        int exitIndex;
+        do
+        {
+            exitIndex = Random.Range(0, Entries.Length);
+        } while (exitIndex == entryIndex);
+
+        return Connections[exitIndex];
     }
 
     /// <summary>
-    /// Gets the opposite entry point position (Entry1 <-> Entry2)
+    /// Gets the entry point position corresponding to a given connection
     /// </summary>
-    public Vector3 GetOppositeEntryPoint(Vector3 entryPoint)
+    public Vector3 GetEntryPointForConnection(GameObject connection)
     {
-        return IsEntry1(entryPoint) ? Entry2.transform.position : Entry1.transform.position;
+        for (int i = 0; i < Connections.Length; i++)
+        {
+            if (Connections[i] == connection)
+            {
+                return Entries[i].transform.position;
+            }
+        }
+
+        // Fallback: return first entry
+        return Entries[0].transform.position;
     }
 
     /// <summary>
     /// Gets the path through this tube starting from the given entry point.
-    /// Returns a list of Vector3 positions: [connection] -> [waypoints] -> [exit connection]
+    /// Returns a list of Vector3 positions: [connection] -> [waypoint] -> [exit connection]
     /// </summary>
     public List<Vector3> GetPathFromEntry(Vector3 entryPoint)
     {
         List<Vector3> path = new List<Vector3>();
-        
-        bool enteringFromEntry1 = IsEntry1(entryPoint);
-        GameObject startConnection = enteringFromEntry1 ? Connection1 : Connection2;
-        GameObject endConnection = enteringFromEntry1 ? Connection2 : Connection1;
-        
+
+        GameObject startConnection = GetConnectionAtEntry(entryPoint);
+        GameObject endConnection = GetExitConnection(entryPoint);
+
         // Start at the connection point
         path.Add(startConnection.transform.position);
 
-        // Waypoint is always at the middle of the tube
+        // Waypoint is always used as the midpoint between any 2 different connections
         path.Add(Waypoint.transform.position);
-        
+
         // End at the exit connection
         path.Add(endConnection.transform.position);
-        
+
         return path;
     }
 
@@ -89,37 +124,31 @@ public class Tube : PlaceableObject
     {
         List<Tube> connectedTubes = new List<Tube>();
         Vector3 connectionPos = connectionPoint.transform.position;
-        
+
         // Find all tubes in the scene
         Tube[] allTubes = FindObjectsByType<Tube>(FindObjectsSortMode.None);
-        
+
         foreach (Tube tube in allTubes)
         {
             // Skip self
             if (tube == this)
                 continue;
-            
-            // Check if this tube's Connection1 or Connection2 is close to our connection point
-            if (tube.Connection1 != null)
+
+            // Check if any of this tube's connections are close to our connection point
+            for (int i = 0; i < tube.Connections.Length; i++)
             {
-                float dist1 = Vector3.Distance(connectionPos, tube.Connection1.transform.position);
-                if (dist1 < CONNECTION_THRESHOLD)
+                if (tube.Connections[i] != null)
                 {
-                    connectedTubes.Add(tube);
-                    continue;
-                }
-            }
-            
-            if (tube.Connection2 != null)
-            {
-                float dist2 = Vector3.Distance(connectionPos, tube.Connection2.transform.position);
-                if (dist2 < CONNECTION_THRESHOLD)
-                {
-                    connectedTubes.Add(tube);
+                    float dist = Vector3.Distance(connectionPos, tube.Connections[i].transform.position);
+                    if (dist < CONNECTION_THRESHOLD)
+                    {
+                        connectedTubes.Add(tube);
+                        break; // Only add the tube once, even if multiple connections match
+                    }
                 }
             }
         }
-        
+
         return connectedTubes;
     }
 
@@ -164,14 +193,18 @@ public class Tube : PlaceableObject
             {
                 // Determine which entry point of the next tube corresponds to the connection
                 // Find the entry point closest to our exit connection
-                Vector3 nextEntryPoint;
-                float distToEntry1 = Vector3.Distance(exitConnection.transform.position, nextTube.Entry1.transform.position);
-                float distToEntry2 = Vector3.Distance(exitConnection.transform.position, nextTube.Entry2.transform.position);
-                
-                if (distToEntry1 < distToEntry2)
-                    nextEntryPoint = nextTube.Entry1.transform.position;
-                else
-                    nextEntryPoint = nextTube.Entry2.transform.position;
+                Vector3 nextEntryPoint = nextTube.Entries[0].transform.position;
+                float minDistance = Vector3.Distance(exitConnection.transform.position, nextEntryPoint);
+
+                for (int i = 1; i < nextTube.Entries.Length; i++)
+                {
+                    float distance = Vector3.Distance(exitConnection.transform.position, nextTube.Entries[i].transform.position);
+                    if (distance < minDistance)
+                    {
+                        minDistance = distance;
+                        nextEntryPoint = nextTube.Entries[i].transform.position;
+                    }
+                }
                 
                 // Create a copy of visited set for this branch (so backtracking doesn't affect other branches)
                 HashSet<Tube> branchVisited = new HashSet<Tube>(visited);
@@ -210,26 +243,26 @@ public class Tube : PlaceableObject
         else
         {
             // No connected tube - check if the exit entry point is actually unblocked
-            // Get the opposite entry point (where the hamster would exit)
-            Vector3 oppositeEntryPoint = GetOppositeEntryPoint(entryPoint);
-            
+            // Get the exit entry point (where the hamster would exit)
+            Vector3 exitEntryPoint = GetEntryPointForConnection(exitConnection);
+
             // Check if the exit entry point's grid cell is occupied
             GridManager gridManager = FindObjectsByType<GridManager>(FindObjectsSortMode.None).FirstOrDefault();
             if (gridManager != null)
             {
-                Vector2Int exitGridPos = gridManager.WorldToGrid(oppositeEntryPoint);
+                Vector2Int exitGridPos = gridManager.WorldToGrid(exitEntryPoint);
                 bool isExitBlocked = !gridManager.IsWithinBounds(exitGridPos) || gridManager.IsCellOccupied(exitGridPos);
-                
+
                 if (isExitBlocked)
                 {
                     // Exit entry point is blocked by another object - need to backtrack
-                    Debug.Log($"Tube {gameObject.name}: Exit entry point at {oppositeEntryPoint} is blocked (grid cell {exitGridPos} is occupied), backtracking");
+                    Debug.Log($"Tube {gameObject.name}: Exit entry point at {exitEntryPoint} is blocked (grid cell {exitGridPos} is occupied), backtracking");
                     return (fullPath, true);
                 }
             }
-            
+
             // No connected tube and exit entry point is not blocked - this is an unblocked exit
-            Debug.Log($"Tube {gameObject.name}: Exit entry point at {oppositeEntryPoint} is unblocked");
+            Debug.Log($"Tube {gameObject.name}: Exit entry point at {exitEntryPoint} is unblocked");
             return (fullPath, false);
         }
     }

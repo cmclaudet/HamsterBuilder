@@ -10,8 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d7536e28961ae4e5699eefad99850402, type: 3}
-  m_Name: Tube4Way
+  m_Name: Tube 3 Way
   m_EditorClassIdentifier: 
   GridSize: {x: 1, y: 1}
-  Prefab: {fileID: 7507520524558408093, guid: d73acb2626885462c91286409cefeb5b, type: 3}
-  Order: 0
+  Prefab: {fileID: 7375311219472546287, guid: 3d1f21fb590c347f2afba83c5755fef7, type: 3}
+  Order: 2

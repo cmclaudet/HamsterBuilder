@@ -248,6 +248,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7381470647464719038}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7327694833118927740
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8552119165585523918}
+  m_Layer: 0
+  m_Name: Waypoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8552119165585523918
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7327694833118927740}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7381470647464719038}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8155424182295201486
 GameObject:
   m_ObjectHideFlags: 0
@@ -287,6 +318,7 @@ Transform:
   - {fileID: 7159140077788019782}
   - {fileID: 573422408134695696}
   - {fileID: 6552954027080520226}
+  - {fileID: 8552119165585523918}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7507520524558408093
@@ -304,11 +336,17 @@ MonoBehaviour:
   meshCollider: {fileID: 168496156265062014}
   objectType: 0
   ViableRotations: 00000000
-  Entry1: {fileID: 0}
-  Entry2: {fileID: 0}
-  Waypoint: {fileID: 0}
-  Connection1: {fileID: 0}
-  Connection2: {fileID: 0}
+  Entries:
+  - {fileID: 3571529552789762219}
+  - {fileID: 1277897170393753728}
+  - {fileID: 2767998396547306565}
+  - {fileID: 4599537731857208113}
+  Connections:
+  - {fileID: 1496733747721993627}
+  - {fileID: 7137225043503026051}
+  - {fileID: 6266895516045481999}
+  - {fileID: 5373171399702515414}
+  Waypoint: {fileID: 7327694833118927740}
 --- !u!1001 &3891009424231724067
 PrefabInstance:
   m_ObjectHideFlags: 0

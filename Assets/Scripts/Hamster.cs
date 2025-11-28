@@ -333,23 +333,21 @@ public class Hamster : MonoBehaviour
     {
         Tube[] allTubes = FindObjectsByType<Tube>(FindObjectsSortMode.None);
         const float threshold = 0.1f;
-        
+
         foreach (Tube tube in allTubes)
         {
-            if (tube.Connection1 != null)
+            // Check all connections in the tube
+            for (int i = 0; i < tube.Connections.Length; i++)
             {
-                float dist1 = Vector3.Distance(connectionPoint, tube.Connection1.transform.position);
-                if (dist1 < threshold)
-                    return tube;
-            }
-            if (tube.Connection2 != null)
-            {
-                float dist2 = Vector3.Distance(connectionPoint, tube.Connection2.transform.position);
-                if (dist2 < threshold)
-                    return tube;
+                if (tube.Connections[i] != null)
+                {
+                    float dist = Vector3.Distance(connectionPoint, tube.Connections[i].transform.position);
+                    if (dist < threshold)
+                        return tube;
+                }
             }
         }
-        
+
         return null;
     }
     
@@ -358,22 +356,31 @@ public class Hamster : MonoBehaviour
     /// </summary>
     private Vector3 GetOppositeEntryPoint(Tube tube, Vector3 exitConnectionPoint)
     {
-        // Determine which connection this is
-        float distToConn1 = tube.Connection1 != null ? 
-            Vector3.Distance(exitConnectionPoint, tube.Connection1.transform.position) : float.MaxValue;
-        float distToConn2 = tube.Connection2 != null ? 
-            Vector3.Distance(exitConnectionPoint, tube.Connection2.transform.position) : float.MaxValue;
-        
-        if (distToConn1 < distToConn2)
+        // Find which connection index this exit connection point corresponds to
+        int connectionIndex = -1;
+        float minDist = float.MaxValue;
+
+        for (int i = 0; i < tube.Connections.Length; i++)
         {
-            // Exit is at Connection1, so opposite entry is Entry1
-            return tube.Entry1.transform.position;
+            if (tube.Connections[i] != null)
+            {
+                float dist = Vector3.Distance(exitConnectionPoint, tube.Connections[i].transform.position);
+                if (dist < minDist)
+                {
+                    minDist = dist;
+                    connectionIndex = i;
+                }
+            }
         }
-        else
+
+        // Return the entry point corresponding to this connection
+        if (connectionIndex >= 0 && connectionIndex < tube.Entries.Length)
         {
-            // Exit is at Connection2, so opposite entry is Entry2
-            return tube.Entry2.transform.position;
+            return tube.Entries[connectionIndex].transform.position;
         }
+
+        // Fallback: return first entry
+        return tube.Entries[0].transform.position;
     }
     
     /// <summary>
@@ -393,21 +400,31 @@ public class Hamster : MonoBehaviour
     /// </summary>
     private Vector3 GetEntryPointForConnection(Tube tube, Vector3 connectionPoint)
     {
-        float distToConn1 = tube.Connection1 != null ? 
-            Vector3.Distance(connectionPoint, tube.Connection1.transform.position) : float.MaxValue;
-        float distToConn2 = tube.Connection2 != null ? 
-            Vector3.Distance(connectionPoint, tube.Connection2.transform.position) : float.MaxValue;
-        
-        if (distToConn1 < distToConn2)
+        // Find which connection index this connection point corresponds to
+        int connectionIndex = -1;
+        float minDist = float.MaxValue;
+
+        for (int i = 0; i < tube.Connections.Length; i++)
         {
-            // Connection point is Connection1, so entry is Entry1
-            return tube.Entry1.transform.position;
+            if (tube.Connections[i] != null)
+            {
+                float dist = Vector3.Distance(connectionPoint, tube.Connections[i].transform.position);
+                if (dist < minDist)
+                {
+                    minDist = dist;
+                    connectionIndex = i;
+                }
+            }
         }
-        else
+
+        // Return the entry point corresponding to this connection
+        if (connectionIndex >= 0 && connectionIndex < tube.Entries.Length)
         {
-            // Connection point is Connection2, so entry is Entry2
-            return tube.Entry2.transform.position;
+            return tube.Entries[connectionIndex].transform.position;
         }
+
+        // Fallback: return first entry
+        return tube.Entries[0].transform.position;
     }
     
     private IEnumerator FindAndSetTarget()
