@@ -4,7 +4,7 @@ using UnityEngine;
 public class HamsterManager : MonoBehaviour {
     public static HamsterManager Instance;
     private int spawnedHamsterCount;
-    private int maxSpawnedHamsters = 10;
+    private int maxSpawnedHamsters = 200;
 
     void Awake() {
         Instance = this;

@@ -21,19 +21,20 @@ public class PlayButton : MonoBehaviour
 
     private void TogglePlayMode()
     {
-        var hamsterSpawners = FindObjectsByType<HamsterSpawner>(FindObjectsSortMode.None);
         var gridManager = FindObjectsByType<GridManager>(FindObjectsSortMode.None)[0];
+        GameObject[] hamsterSpawners = GameObject.FindGameObjectsWithTag("Spawner");
 
         if (!isPlayMode) {
+            DeregisterSpawnerFromGrid(gridManager, hamsterSpawners);
             // Disable editing
             placementSystem.DisableEditing();
-            DeregisterSpawnerFromGrid(gridManager, hamsterSpawners);
+            // var hamsterSpawners = FindObjectsByType<HamsterSpawner>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
             var buttons = uIPanel.GetComponentsInChildren<Button>();
             foreach (var button in buttons) {
                 button.interactable = false;
             }
             foreach (var spawner in hamsterSpawners) {
-                spawner.SpawnHamsters();
+                spawner.GetComponent<HamsterSpawner>().SpawnHamsters();
             }
             
             // Update UI
@@ -47,8 +48,13 @@ public class PlayButton : MonoBehaviour
             foreach (var button in buttons) {
                 button.interactable = true;
             }
+            var allPlaceableObjects = FindObjectsByType<PlaceableObject>(FindObjectsSortMode.None);
+            foreach (var placeableObject in allPlaceableObjects)
+            {
+                placeableObject.StopAllCoroutines();
+            }
             foreach (var spawner in hamsterSpawners) {
-                spawner.DespawnHamsters();
+                spawner.GetComponent<HamsterSpawner>().DespawnHamsters();
             }
             HamsterManager.Instance.ResetSpawnedHamsters();
 
@@ -60,16 +66,20 @@ public class PlayButton : MonoBehaviour
         
     }
 
-    private void DeregisterSpawnerFromGrid(GridManager gridManager, HamsterSpawner[] hamsterSpawners)
+    private void DeregisterSpawnerFromGrid(GridManager gridManager, GameObject[] hamsterSpawners)
     {
         foreach (var spawner in hamsterSpawners)
         {
+            if (spawner == placementSystem.PreviewObject)
+            {
+                continue;
+            }
             var placedData = spawner.GetComponent<PlacementSystem.PlacedObjectData>();
             gridManager.FreeCells(placedData.gridPosition, placedData.gridSize);
         }
     }
     
-    private void RegisterSpawnerToGrid(GridManager gridManager, HamsterSpawner[] hamsterSpawners)
+    private void RegisterSpawnerToGrid(GridManager gridManager, GameObject[] hamsterSpawners)
     {
         foreach (var spawner in hamsterSpawners)
         {

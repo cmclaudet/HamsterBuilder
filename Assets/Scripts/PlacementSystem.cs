@@ -12,6 +12,7 @@ public class PlacementSystem : MonoBehaviour
     
     private PlaceableObjectDefinition currentPlaceableObject;
     private GameObject previewObject;
+    public GameObject PreviewObject => previewObject;
     private Vector2Int currentGridPosition;
     private bool isPlacementValid;
     private float previewYOffset; // Y offset to place object on floor

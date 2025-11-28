@@ -24,7 +24,7 @@ public class Hamster : MonoBehaviour
     private bool isInteracting = false;
     private bool isGoingToChillOut = false;
     private bool isChillingOut = false;
-    private int foodPieceCount;
+    public int foodPieceCount;
     private PlaceableObject targetObject;
     private Dictionary<ObjectType, float> lastInteractionTime = new Dictionary<ObjectType, float>();
     
@@ -60,6 +60,16 @@ public class Hamster : MonoBehaviour
 
     public void AddFoodPiece() {
         foodPieceCount++;
+    }
+
+    public int GetFoodPieceCount() {
+        return foodPieceCount;
+    }
+
+    public void RemoveFoodPiece() {
+        if (foodPieceCount > 0) {
+            foodPieceCount--;
+        }
     }
 
     public void SetPosition(Vector3 position)
@@ -430,11 +440,30 @@ public class Hamster : MonoBehaviour
     private IEnumerator FindAndSetTarget()
     {
         yield return new WaitForSeconds(moveDelay);
-        
+
         // Don't find new targets while in a tube
         if (isInTube)
             yield break;
+
+        PlaceableObject[] allObjects;
         
+        // Priority 1: If hamster has food, find a house
+        if (foodPieceCount > 0)
+        {
+            // Find all PlaceableObjects in the scene
+            allObjects = FindObjectsByType<PlaceableObject>(FindObjectsSortMode.None);
+
+            // Filter for houses only
+            PlaceableObject[] houses = allObjects.Where(obj => obj.objectType == ObjectType.House).ToArray();
+
+            if (houses.Length > 0)
+            {
+                // Use the house-finding logic
+                yield return StartCoroutine(FindAndSetTargetForObjects(houses));
+                yield break;
+            }
+        }
+
         // Roll for chill out probability
         if (Random.Range(0f, 1f) < chillOutProbability)
         {
@@ -442,74 +471,79 @@ public class Hamster : MonoBehaviour
             yield return StartCoroutine(GoToChillOut());
             yield break;
         }
-        
+
         // Find all PlaceableObjects in the scene
-        PlaceableObject[] allObjects = FindObjectsByType<PlaceableObject>(FindObjectsSortMode.None);
-        
+        allObjects = FindObjectsByType<PlaceableObject>(FindObjectsSortMode.None);
+
+        yield return StartCoroutine(FindAndSetTargetForObjects(allObjects));
+    }
+
+    private IEnumerator FindAndSetTargetForObjects(PlaceableObject[] objects)
+    {
         // Get hamster's current grid position
         Vector2Int hamsterGridPos = gridManager.WorldToGrid(transform.position);
-        
+
         // Dictionary to store objects with their valid entry points
         // Key: PlaceableObject, Value: List of (worldPos, path) tuples
-        Dictionary<PlaceableObject, List<(Vector3 worldPos, List<Vector2Int> path)>> objectsWithValidEntryPoints = 
+        Dictionary<PlaceableObject, List<(Vector3 worldPos, List<Vector2Int> path)>> objectsWithValidEntryPoints =
             new Dictionary<PlaceableObject, List<(Vector3, List<Vector2Int>)>>();
-        
-        foreach (PlaceableObject obj in allObjects)
+
+        foreach (PlaceableObject obj in objects)
         {
             Vector3[] entryPoints = obj.GetEntryPoints();
-            List<(Vector3 worldPos, List<Vector2Int> path)> validEntryPointsForThisObject = 
+            List<(Vector3 worldPos, List<Vector2Int> path)> validEntryPointsForThisObject =
                 new List<(Vector3, List<Vector2Int>)>();
-            
+
             foreach (Vector3 entryPoint in entryPoints)
             {
                 // Check distance
                 float distance = Vector3.Distance(transform.position, entryPoint);
                 if (distance > lookDistance)
                     continue;
-                
+
                 // Convert to grid position
                 Vector2Int entryGridPos = gridManager.WorldToGrid(entryPoint);
-                
+
                 // Check if entry point cell is occupied
                 if (gridManager.IsCellOccupied(entryGridPos))
                     continue;
-                
+
                 // Try to find a path to this entry point
                 List<Vector2Int> path = gridManager.FindPath(hamsterGridPos, entryGridPos);
-                
+
                 if (path != null && path.Count > 0)
                 {
                     validEntryPointsForThisObject.Add((entryPoint, path));
                 }
             }
-            
+
             // Only add objects that have at least one valid entry point
             if (validEntryPointsForThisObject.Count > 0)
             {
                 objectsWithValidEntryPoints[obj] = validEntryPointsForThisObject;
             }
         }
-        
+
         // If we have objects with valid entry points, prioritize and pick one
         if (objectsWithValidEntryPoints.Count > 0)
         {
             // Create a list of objects with their priority scores
-            List<(PlaceableObject obj, float priority)> prioritizedObjects = 
+            List<(PlaceableObject obj, float priority)> prioritizedObjects =
                 new List<(PlaceableObject, float)>();
-            
+
             float currentTime = Time.time;
-            
+
             foreach (PlaceableObject obj in objectsWithValidEntryPoints.Keys)
             {
                 float priority = 0f;
-                
+
                 // Priority 1: Objects with empty hamstersInteracting lists get higher priority
                 // (multiply by 1000 to ensure this is the primary factor)
                 if (obj.hamstersInteracting.Count == 0)
                 {
                     priority += 1000f;
                 }
-                
+
                 // Priority 2: Objects of types interacted with longest ago get higher priority
                 // Get time since last interaction (or use a very large value if never interacted)
                 float timeSinceLastInteraction = float.MaxValue;
@@ -517,48 +551,51 @@ public class Hamster : MonoBehaviour
                 {
                     timeSinceLastInteraction = currentTime - lastInteractionTime[obj.objectType];
                 }
-                
+
                 // Add time since last interaction to priority (longer = higher priority)
                 priority += timeSinceLastInteraction;
-                
+
                 prioritizedObjects.Add((obj, priority));
             }
-            
+
             // Sort by priority (descending - highest priority first)
             prioritizedObjects.Sort((a, b) => b.priority.CompareTo(a.priority));
-            
+
             // Get the highest priority objects (may be multiple with same priority)
             float highestPriority = prioritizedObjects[0].priority;
             List<PlaceableObject> highestPriorityObjects = prioritizedObjects
                 .Where(x => Mathf.Approximately(x.priority, highestPriority))
                 .Select(x => x.obj)
                 .ToList();
-            
+
             // Randomly choose from the highest priority objects
             int randomObjectIndex = Random.Range(0, highestPriorityObjects.Count);
             PlaceableObject chosenObject = highestPriorityObjects[randomObjectIndex];
-            
+
             // Randomly choose one entry point from the chosen object's valid entry points
-            List<(Vector3 worldPos, List<Vector2Int> path)> entryPointsForChosenObject = 
+            List<(Vector3 worldPos, List<Vector2Int> path)> entryPointsForChosenObject =
                 objectsWithValidEntryPoints[chosenObject];
             int randomEntryIndex = Random.Range(0, entryPointsForChosenObject.Count);
             var chosenEntry = entryPointsForChosenObject[randomEntryIndex];
-            
+
             currentPath = chosenEntry.path;
             currentPathIndex = 0;
             targetWorldPosition = chosenEntry.worldPos;
             targetObject = chosenObject;
             hasTarget = true;
             isMoving = true;
-            
+
             Debug.Log($"Hamster found {objectsWithValidEntryPoints.Count} objects with valid entry points, chose object with {entryPointsForChosenObject.Count} entry points, selected entry at {targetWorldPosition}");
         }
         else
         {
-            Debug.Log("Hamster found no valid entry points within range");
+            Debug.Log("Hamster found no valid entry points within range, go to chill instead");
             hasTarget = false;
             isMoving = false;
+            yield return StartCoroutine(GoToChillOut());
         }
+
+        yield return null;
     }
     
     private void MoveAlongPath()
