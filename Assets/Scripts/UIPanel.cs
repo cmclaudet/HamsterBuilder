@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 
 public class UIPanel : MonoBehaviour
@@ -17,6 +18,7 @@ public class UIPanel : MonoBehaviour
     {
         // Load all PlaceableObject assets from Resources
         PlaceableObjectDefinition[] placeableObjects = Resources.LoadAll<PlaceableObjectDefinition>("PlaceableObjects");
+        placeableObjects = placeableObjects.OrderBy(p => p.Order).ToArray();
         
         // Create a button for each placeable object
         foreach (PlaceableObjectDefinition placeableObject in placeableObjects)

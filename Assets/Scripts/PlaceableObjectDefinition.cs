@@ -5,4 +5,5 @@ public class PlaceableObjectDefinition : ScriptableObject
 {
     public Vector2Int GridSize;
     public PlaceableObject Prefab;
+    public int Order;
 }

@@ -14,3 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   GridSize: {x: 2, y: 1}
   Prefab: {fileID: 7889292328981383663, guid: 2513635f8a7dc4b4084336557c544991, type: 3}
+  Order: 1
