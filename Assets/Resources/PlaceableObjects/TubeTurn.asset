@@ -10,8 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d7536e28961ae4e5699eefad99850402, type: 3}
-  m_Name: Tube
+  m_Name: TubeTurn
   m_EditorClassIdentifier: 
   GridSize: {x: 1, y: 1}
-  Prefab: {fileID: 6594230088869223019, guid: dd2d6af0f36dc4f6c8750701c01df39b, type: 3}
+  Prefab: {fileID: 4212940373879302880, guid: 3592caf97cecb49a2b99f1a6f03ce722, type: 3}
   Order: 0

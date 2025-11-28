@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class PlaceableObject : MonoBehaviour 
 {
-    public MeshCollider meshCollider;
+    public Collider meshCollider;
     public ObjectType objectType;
     public int[] ViableRotations;
     private int currentRotationIndex;
