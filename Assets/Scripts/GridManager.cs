@@ -124,7 +124,19 @@ public class GridManager : MonoBehaviour
             // If a valid path was found, return it
             if (path != null && path.Count > 0)
             {
-                return path;
+                // Check if path length is less than or equal to radius
+                // Calculate actual path length by summing distances between consecutive waypoints
+                float pathLengthInGridUnits = 0f;
+                for (int i = 0; i < path.Count - 1; i++)
+                {
+                    pathLengthInGridUnits += Vector2Int.Distance(path[i], path[i + 1]);
+                }
+                float pathLengthInWorldUnits = pathLengthInGridUnits * cage.GridUnitSize;
+
+                if (pathLengthInWorldUnits <= radius)
+                {
+                    return path;
+                }
             }
         }
         
