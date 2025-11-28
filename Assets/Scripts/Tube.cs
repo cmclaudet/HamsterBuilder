@@ -7,8 +7,8 @@ public class Tube : PlaceableObject
     public GameObject Entry1;
     public GameObject Entry2;
 
-    // waypoint positions are path waypoints ordered from connection1 to connection2
-    public GameObject[] Waypoints;
+    // waypoint is pass through point between entries
+    public GameObject Waypoint;
     
     // start path at connection1 if hamster enters from entry1
     public GameObject Connection1;
@@ -72,29 +72,9 @@ public class Tube : PlaceableObject
         
         // Start at the connection point
         path.Add(startConnection.transform.position);
-        
-        // Add waypoints (forward if Entry1, reverse if Entry2)
-        if (Waypoints != null && Waypoints.Length > 0)
-        {
-            if (enteringFromEntry1)
-            {
-                // Forward order: waypoints as defined
-                foreach (GameObject waypoint in Waypoints)
-                {
-                    if (waypoint != null)
-                        path.Add(waypoint.transform.position);
-                }
-            }
-            else
-            {
-                // Reverse order: waypoints in reverse
-                for (int i = Waypoints.Length - 1; i >= 0; i--)
-                {
-                    if (Waypoints[i] != null)
-                        path.Add(Waypoints[i].transform.position);
-                }
-            }
-        }
+
+        // Waypoint is always at the middle of the tube
+        path.Add(Waypoint.transform.position);
         
         // End at the exit connection
         path.Add(endConnection.transform.position);

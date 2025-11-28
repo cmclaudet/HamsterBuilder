@@ -148,8 +148,7 @@ MonoBehaviour:
   ViableRotations: 
   Entry1: {fileID: 2134522916228542233}
   Entry2: {fileID: 5182285887895994637}
-  Waypoints:
-  - {fileID: 8632906736874797207}
+  Waypoint: {fileID: 8632906736874797207}
   Connection1: {fileID: 8303697035293874422}
   Connection2: {fileID: 4608446414330315249}
 --- !u!1 &8303697035293874422
