@@ -22,10 +22,12 @@ public class PlayButton : MonoBehaviour
     private void TogglePlayMode()
     {
         var hamsterSpawners = FindObjectsByType<HamsterSpawner>(FindObjectsSortMode.None);
+        var gridManager = FindObjectsByType<GridManager>(FindObjectsSortMode.None)[0];
 
         if (!isPlayMode) {
             // Disable editing
             placementSystem.DisableEditing();
+            DeregisterSpawnerFromGrid(gridManager, hamsterSpawners);
             var buttons = uIPanel.GetComponentsInChildren<Button>();
             foreach (var button in buttons) {
                 button.interactable = false;
@@ -40,6 +42,7 @@ public class PlayButton : MonoBehaviour
             isPlayMode = true;
         } else {
             placementSystem.EnableEditing();
+            RegisterSpawnerToGrid(gridManager, hamsterSpawners);
             var buttons = uIPanel.GetComponentsInChildren<Button>();
             foreach (var button in buttons) {
                 button.interactable = true;
@@ -55,5 +58,23 @@ public class PlayButton : MonoBehaviour
             isPlayMode = false;
         }
         
+    }
+
+    private void DeregisterSpawnerFromGrid(GridManager gridManager, HamsterSpawner[] hamsterSpawners)
+    {
+        foreach (var spawner in hamsterSpawners)
+        {
+            var placedData = spawner.GetComponent<PlacementSystem.PlacedObjectData>();
+            gridManager.FreeCells(placedData.gridPosition, placedData.gridSize);
+        }
+    }
+    
+    private void RegisterSpawnerToGrid(GridManager gridManager, HamsterSpawner[] hamsterSpawners)
+    {
+        foreach (var spawner in hamsterSpawners)
+        {
+            var placedData = spawner.GetComponent<PlacementSystem.PlacedObjectData>();
+            gridManager.OccupyCells(placedData.gridPosition, placedData.gridSize);
+        }
     }
 }
