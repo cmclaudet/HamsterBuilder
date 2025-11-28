@@ -1437,7 +1437,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   panSpeed: 10
-  useWASD: 1
+  useWASD: 0
   enableZoom: 1
   zoomSpeed: 2
   minZoom: 5

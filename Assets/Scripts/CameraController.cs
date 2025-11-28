@@ -120,15 +120,17 @@ public class CameraController : MonoBehaviour
         // Apply movement
         if (movement != Vector3.zero)
         {
-            Vector3 newPosition = transform.position + movement * panSpeed * Time.deltaTime;
-            
+            // Transform movement to camera's local space
+            Vector3 localMovement = transform.TransformDirection(movement);
+            Vector3 newPosition = transform.position + localMovement * panSpeed * Time.deltaTime;
+
             // Apply boundaries if enabled
             if (useBoundaries)
             {
                 newPosition.x = Mathf.Clamp(newPosition.x, minX, maxX);
                 newPosition.y = Mathf.Clamp(newPosition.y, minY, maxY);
             }
-            
+
             transform.position = newPosition;
         }
     }
