@@ -191,6 +191,7 @@ MonoBehaviour:
   meshCollider: {fileID: 6910166626540940621}
   objectType: 1
   ViableRotations: 000000005a000000
+  ShouldEntryPointsBlockPlacement: 1
   Entries:
   - {fileID: 7670048799113436888}
   - {fileID: 7182231556436532415}

@@ -9,6 +9,7 @@ public class PlaceableObject : MonoBehaviour
     public int[] ViableRotations;
     private int currentRotationIndex;
     public HashSet<Hamster> hamstersInteracting = new HashSet<Hamster>();
+    public bool ShouldEntryPointsBlockPlacement = false;
 
     void Start() {
         if (ViableRotations == null || ViableRotations.Length == 0) {

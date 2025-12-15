@@ -5,12 +5,21 @@ using System.Linq;
 public class GridManager : MonoBehaviour
 {
     public Cage cage;
-    
+
     private HashSet<Vector2Int> occupiedCells = new HashSet<Vector2Int>();
-    
+    private HashSet<Vector2Int> placementBlockingCells = new HashSet<Vector2Int>(); // Entry points that block placement but not pathfinding
+
     public bool IsCellOccupied(Vector2Int cell)
     {
         return occupiedCells.Contains(cell);
+    }
+
+    /// <summary>
+    /// Checks if a cell is blocked for placement purposes (occupied by object OR by entry points)
+    /// </summary>
+    public bool IsCellBlockedForPlacement(Vector2Int cell)
+    {
+        return occupiedCells.Contains(cell) || placementBlockingCells.Contains(cell);
     }
     
     public void OccupyCells(Vector2Int gridPos, Vector2Int gridSize)
@@ -34,6 +43,33 @@ public class GridManager : MonoBehaviour
                 Vector2Int cellPos = new Vector2Int(gridPos.x + x, gridPos.y + z);
                 occupiedCells.Remove(cellPos);
             }
+        }
+    }
+
+    /// <summary>
+    /// Mark cells as blocking placement but still walkable (for entry points)
+    /// </summary>
+    public void OccupyPlacementBlockingCells(Vector3[] worldPositions)
+    {
+        foreach (Vector3 worldPos in worldPositions)
+        {
+            Vector2Int gridPos = WorldToGrid(worldPos);
+            if (IsWithinBounds(gridPos))
+            {
+                placementBlockingCells.Add(gridPos);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Free cells that were blocking placement (for entry points)
+    /// </summary>
+    public void FreePlacementBlockingCells(Vector3[] worldPositions)
+    {
+        foreach (Vector3 worldPos in worldPositions)
+        {
+            Vector2Int gridPos = WorldToGrid(worldPos);
+            placementBlockingCells.Remove(gridPos);
         }
     }
     

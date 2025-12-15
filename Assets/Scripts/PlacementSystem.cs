@@ -253,10 +253,10 @@ public class PlacementSystem : MonoBehaviour
             snappedPosition.y = previewYOffset;
             
             previewObject.transform.position = snappedPosition;
-            
+
             // Validate placement
-            isPlacementValid = IsPlacementValid(gridPos, rotatedSize);
-            
+            isPlacementValid = IsPlacementValid(gridPos, rotatedSize, previewObject);
+
             // Update preview color based on validity
             UpdatePreviewColor(isPlacementValid);
         }
@@ -276,29 +276,55 @@ public class PlacementSystem : MonoBehaviour
         }
     }
     
-    private bool IsPlacementValid(Vector2Int gridPos, Vector2Int objectSize)
+    private bool IsPlacementValid(Vector2Int gridPos, Vector2Int objectSize, GameObject objectToValidate = null)
     {
-        // Check if all cells are within the cage bounds and not occupied
+        // Check if all cells are within the cage bounds and not blocked for placement
         for (int x = 0; x < objectSize.x; x++)
         {
             for (int z = 0; z < objectSize.y; z++)
             {
                 Vector2Int cellPos = new Vector2Int(gridPos.x + x, gridPos.y + z);
-                
+
                 // Check if within cage bounds
                 if (!gridManager.IsWithinBounds(cellPos))
                 {
                     return false;
                 }
-                
-                // Check if cell is already occupied
-                if (gridManager.IsCellOccupied(cellPos))
+
+                // Check if cell is blocked for placement (by objects or entry points)
+                if (gridManager.IsCellBlockedForPlacement(cellPos))
                 {
                     return false;
                 }
             }
         }
-        
+
+        // If object has entry points that block placement, validate those too
+        if (objectToValidate != null)
+        {
+            PlaceableObject placeableObj = objectToValidate.GetComponent<PlaceableObject>();
+            if (placeableObj != null && placeableObj.ShouldEntryPointsBlockPlacement)
+            {
+                Vector3[] entryPoints = placeableObj.GetEntryPoints();
+                foreach (Vector3 entryPoint in entryPoints)
+                {
+                    Vector2Int entryGridPos = gridManager.WorldToGrid(entryPoint);
+
+                    // Check if entry point is within bounds
+                    if (!gridManager.IsWithinBounds(entryGridPos))
+                    {
+                        return false;
+                    }
+
+                    // Entry points can't be placed on occupied cells (but can overlap with other entry points)
+                    if (gridManager.IsCellOccupied(entryGridPos))
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+
         return true;
     }
     
@@ -306,26 +332,34 @@ public class PlacementSystem : MonoBehaviour
     {
         if (currentPlaceableObject == null || previewObject == null)
             return;
-        
+
         // Get the position from preview (which already has correct Y position)
         Vector3 placePosition = previewObject.transform.position;
-        
+
         // Instantiate the actual object
-        GameObject placedObject = Instantiate(currentPlaceableObject.Prefab.gameObject, 
-            placePosition, 
+        GameObject placedObject = Instantiate(currentPlaceableObject.Prefab.gameObject,
+            placePosition,
             previewObject.transform.rotation);
-        
+
         // Get the rotated grid size
         Vector2Int rotatedSize = GetRotatedGridSize();
-        
+
         // Mark grid cells as occupied
         gridManager.OccupyCells(currentGridPosition, rotatedSize);
-        
+
+        // If this object should block placement with its entry points, occupy those cells too
+        PlaceableObject placeableObj = placedObject.GetComponent<PlaceableObject>();
+        if (placeableObj != null && placeableObj.ShouldEntryPointsBlockPlacement)
+        {
+            Vector3[] entryPoints = placeableObj.GetEntryPoints();
+            gridManager.OccupyPlacementBlockingCells(entryPoints);
+        }
+
         // Store grid info on the placed object for potential future removal
         PlacedObjectData placedData = placedObject.AddComponent<PlacedObjectData>();
         placedData.gridPosition = currentGridPosition;
         placedData.gridSize = rotatedSize; // Store the rotated size
-        
+
         // Continue placement mode (don't cancel)
         // User can keep placing the same object type
     }
@@ -370,7 +404,7 @@ public class PlacementSystem : MonoBehaviour
                 dragOriginalRotation = placedData.transform.rotation; // Store original rotation
                 isDragging = true;
                 dragRotation = 0; // Track additional rotation from this point
-                
+
                 // Calculate Y offset for proper positioning
                 PlaceableObject placeableObj = draggedObject.GetComponent<PlaceableObject>();
                 if (placeableObj != null && placeableObj.meshCollider != null)
@@ -382,10 +416,17 @@ public class PlacementSystem : MonoBehaviour
                 {
                     dragYOffset = draggedObject.transform.position.y;
                 }
-                
+
                 // Free up the occupied cells that this object was using
                 gridManager.FreeCells(dragOriginalGridPosition, dragOriginalGridSize);
-                
+
+                // Free up entry point cells if they were blocking placement
+                if (placeableObj != null && placeableObj.ShouldEntryPointsBlockPlacement)
+                {
+                    Vector3[] entryPoints = placeableObj.GetEntryPoints();
+                    gridManager.FreePlacementBlockingCells(entryPoints);
+                }
+
                 // Apply preview material to dragged object
                 ApplyPreviewMaterial(draggedObject);
             }
@@ -417,10 +458,10 @@ public class PlacementSystem : MonoBehaviour
             snappedPosition.y = dragYOffset;
             
             draggedObject.transform.position = snappedPosition;
-            
+
             // Validate placement
-            isPlacementValid = IsPlacementValid(gridPos, rotatedSize);
-            
+            isPlacementValid = IsPlacementValid(gridPos, rotatedSize, draggedObject);
+
             // Update color based on validity
             UpdateDragColor(isPlacementValid);
         }
@@ -433,21 +474,30 @@ public class PlacementSystem : MonoBehaviour
             isDragging = false;
             return;
         }
-        
+
         // Restore original materials
         RestoreOriginalMaterial(draggedObject);
-        
+
         // Get the rotated grid size
         Vector2Int rotatedSize = GetDraggedRotatedGridSize();
-        
+
+        PlaceableObject placeableObj = draggedObject.GetComponent<PlaceableObject>();
+
         if (isPlacementValid)
         {
             // Place in new position
             draggedObjectData.gridPosition = currentGridPosition;
             draggedObjectData.gridSize = rotatedSize; // Update stored grid size
-            
+
             // Mark new grid cells as occupied
             gridManager.OccupyCells(currentGridPosition, rotatedSize);
+
+            // Occupy entry point cells if they should block placement
+            if (placeableObj != null && placeableObj.ShouldEntryPointsBlockPlacement)
+            {
+                Vector3[] entryPoints = placeableObj.GetEntryPoints();
+                gridManager.OccupyPlacementBlockingCells(entryPoints);
+            }
         }
         else
         {
@@ -455,14 +505,21 @@ public class PlacementSystem : MonoBehaviour
             Vector3 originalPosition = gridManager.GridToWorld(dragOriginalGridPosition, dragOriginalGridSize);
             originalPosition.y = dragYOffset;
             draggedObject.transform.position = originalPosition;
-            
+
             // Restore original rotation if placement was invalid
             draggedObject.transform.rotation = dragOriginalRotation;
-            
+
             // Re-occupy original cells
             gridManager.OccupyCells(dragOriginalGridPosition, dragOriginalGridSize);
+
+            // Re-occupy entry point cells if they should block placement
+            if (placeableObj != null && placeableObj.ShouldEntryPointsBlockPlacement)
+            {
+                Vector3[] entryPoints = placeableObj.GetEntryPoints();
+                gridManager.OccupyPlacementBlockingCells(entryPoints);
+            }
         }
-        
+
         // Clear drag state
         draggedObject = null;
         draggedObjectData = null;
@@ -475,24 +532,32 @@ public class PlacementSystem : MonoBehaviour
         // Raycast to find a placed object
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
-        
+
         if (Physics.Raycast(ray, out hit))
         {
             // Check if the hit object or its parent has PlacedObjectData
             GameObject hitObject = hit.collider.gameObject;
             PlacedObjectData placedData = hitObject.GetComponent<PlacedObjectData>();
-            
+
             // If not found on the hit object, check parent
             if (placedData == null)
             {
                 placedData = hitObject.GetComponentInParent<PlacedObjectData>();
             }
-            
+
             if (placedData != null)
             {
                 // Free up occupied cells
                 gridManager.FreeCells(placedData.gridPosition, placedData.gridSize);
-                
+
+                // Free up entry point cells if they were blocking placement
+                PlaceableObject placeableObj = placedData.GetComponent<PlaceableObject>();
+                if (placeableObj != null && placeableObj.ShouldEntryPointsBlockPlacement)
+                {
+                    Vector3[] entryPoints = placeableObj.GetEntryPoints();
+                    gridManager.FreePlacementBlockingCells(entryPoints);
+                }
+
                 // Destroy the object
                 Destroy(placedData.gameObject);
             }
