@@ -77,6 +77,28 @@ public class PlayButton : MonoBehaviour
             var placedData = spawner.GetComponent<PlacementSystem.PlacedObjectData>();
             gridManager.FreeCells(placedData.gridPosition, placedData.gridSize);
         }
+
+        // Also deregister Food objects so hamsters can walk over them
+        Food[] foodObjects = FindObjectsByType<Food>(FindObjectsSortMode.None);
+        foreach (var food in foodObjects)
+        {
+            if (food.gameObject == placementSystem.PreviewObject)
+            {
+                continue;
+            }
+            var placedData = food.GetComponent<PlacementSystem.PlacedObjectData>();
+            if (placedData != null)
+            {
+                gridManager.FreeCells(placedData.gridPosition, placedData.gridSize);
+
+                // Free entry point cells if they were blocking placement
+                if (food.ShouldEntryPointsBlockPlacement)
+                {
+                    Vector3[] entryPoints = food.GetEntryPoints();
+                    gridManager.FreePlacementBlockingCells(entryPoints);
+                }
+            }
+        }
     }
     
     private void RegisterSpawnerToGrid(GridManager gridManager, GameObject[] hamsterSpawners)
@@ -85,6 +107,24 @@ public class PlayButton : MonoBehaviour
         {
             var placedData = spawner.GetComponent<PlacementSystem.PlacedObjectData>();
             gridManager.OccupyCells(placedData.gridPosition, placedData.gridSize);
+        }
+
+        // Also re-register Food objects
+        Food[] foodObjects = FindObjectsByType<Food>(FindObjectsSortMode.None);
+        foreach (var food in foodObjects)
+        {
+            var placedData = food.GetComponent<PlacementSystem.PlacedObjectData>();
+            if (placedData != null)
+            {
+                gridManager.OccupyCells(placedData.gridPosition, placedData.gridSize);
+
+                // Re-occupy entry point cells if they should block placement
+                if (food.ShouldEntryPointsBlockPlacement)
+                {
+                    Vector3[] entryPoints = food.GetEntryPoints();
+                    gridManager.OccupyPlacementBlockingCells(entryPoints);
+                }
+            }
         }
     }
 }
