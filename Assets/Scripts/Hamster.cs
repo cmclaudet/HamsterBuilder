@@ -289,23 +289,37 @@ public class Hamster : MonoBehaviour
         tubePath = null;
         tubePathIndex = 0;
         isMoving = false;
-        
+
         if (currentTube != null)
         {
             currentTube.OnInteractEnd(this);
             currentTube = null;
         }
-        
+
         isBacktracking = false;
         originalEntryPoint = Vector3.zero;
         originalTube = null;
         originalTubePath = null;
         isExitingToEntryPoint = false;
-        
+
         Debug.Log("Hamster exited tube system");
-        
-        // Resume normal behavior - find a new target
-        StartCoroutine(FindAndSetTarget());
+
+        // Check if there's an object with an entry point at the current grid cell
+        PlaceableObject objectAtCurrentCell = FindObjectAtCurrentGridCell();
+
+        if (objectAtCurrentCell != null)
+        {
+            // Found an object with an entry point at the same grid cell - interact with it immediately
+            Debug.Log($"Hamster found object {objectAtCurrentCell.gameObject.name} at current grid cell after tube exit, interacting immediately");
+            targetObject = objectAtCurrentCell;
+            hasTarget = true;
+            objectAtCurrentCell.OnInteract(this);
+        }
+        else
+        {
+            // Resume normal behavior - find a new target
+            StartCoroutine(FindAndSetTarget());
+        }
     }
     
     /// <summary>
@@ -317,23 +331,76 @@ public class Hamster : MonoBehaviour
         tubePath = null;
         tubePathIndex = 0;
         isMoving = false;
-        
+
         if (currentTube != null)
         {
             currentTube.OnInteractEnd(this);
             currentTube = null;
         }
-        
+
         isBacktracking = false;
         originalEntryPoint = Vector3.zero;
         originalTube = null;
         originalTubePath = null;
         isExitingToEntryPoint = false;
-        
+
         Debug.Log("Hamster completed tube exit at entry point");
-        
-        // Resume normal behavior - find a new target
-        StartCoroutine(FindAndSetTarget());
+
+        // Check if there's an object with an entry point at the current grid cell
+        PlaceableObject objectAtCurrentCell = FindObjectAtCurrentGridCell();
+
+        if (objectAtCurrentCell != null)
+        {
+            // Found an object with an entry point at the same grid cell - interact with it immediately
+            Debug.Log($"Hamster found object {objectAtCurrentCell.gameObject.name} at current grid cell after tube exit, interacting immediately");
+            targetObject = objectAtCurrentCell;
+            hasTarget = true;
+            objectAtCurrentCell.OnInteract(this);
+        }
+        else
+        {
+            // Resume normal behavior - find a new target
+            StartCoroutine(FindAndSetTarget());
+        }
+    }
+
+    /// <summary>
+    /// Finds an object that has an entry point at the hamster's current grid cell
+    /// Excludes Tube objects to prevent infinite tube interactions
+    /// </summary>
+    private PlaceableObject FindObjectAtCurrentGridCell()
+    {
+        Vector2Int currentGridPos = gridManager.WorldToGrid(transform.position);
+        PlaceableObject[] allObjects = FindObjectsByType<PlaceableObject>(FindObjectsSortMode.None);
+
+        foreach (PlaceableObject obj in allObjects)
+        {
+            // Filter out Tube objects to prevent infinite tube interactions
+            if (obj is Tube)
+            {
+                continue;
+            }
+
+            Vector3[] entryPoints = obj.GetEntryPoints();
+
+            foreach (Vector3 entryPoint in entryPoints)
+            {
+                Vector2Int entryGridPos = gridManager.WorldToGrid(entryPoint);
+
+                // Check if this entry point is at the same grid cell as the hamster
+                if (entryGridPos == currentGridPos)
+                {
+                    // Also check that the entry point is close enough in world space
+                    float distance = Vector3.Distance(transform.position, entryPoint);
+                    if (distance < 0.5f) // Use a small threshold for world space distance
+                    {
+                        return obj;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
     
     /// <summary>

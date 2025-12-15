@@ -27,7 +27,7 @@ public class HamsterSpawner : PlaceableObject
     private IEnumerator Spawn()
     {
         // Spawn 3 hamsters at spawn position
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 10; i++)
         {
             yield return new WaitForSeconds(spawnFrequency);
             if (HamsterManager.Instance.CanSpawnHamsters()) {
