@@ -263,6 +263,7 @@ public class Tube : PlaceableObject
 
             // No connected tube and exit entry point is not blocked - this is an unblocked exit
             Debug.Log($"Tube {gameObject.name}: Exit entry point at {exitEntryPoint} is unblocked");
+            fullPath.Add(exitEntryPoint);
             return (fullPath, false);
         }
     }
